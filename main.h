@@ -26,6 +26,8 @@ extern int lowerLimit;
 
 extern int hunterTeamsNum;
 
+extern pthread_mutex_t activeTasksMut;
+
 
 /* stany procesu */
 typedef enum {InActive, InOverload, InSearch,InWait, InShop,InTask, InFinish} state_t;
@@ -36,8 +38,8 @@ extern int size;
 typedef enum {REJECTED, REQUEST_NOT_SEND, REQUEST_SEND, ACK_RECEIVED} taskStateNames;
 extern taskStateNames taskState;
 
-/* Ile mamy łoju na składzie? */
-extern int tallow;
+/* Ile mamy aktywnych zlecen */
+extern int activeTasks;
 
 /* stan globalny wykryty przez monitor */
 extern int globalState;
@@ -63,12 +65,107 @@ extern MPI_Datatype MPI_PAKIET_T;
 #define END 1
 #define BROADCAST 2
 #define FIN 3
-#define INMONITOR 4
-#define GIVEMESTATE 5
-#define STATE 6
-#define PREPSTATE 7
-#define TALLOWPREPSTATE 8
+#define TASK_REQ 4
+#define TASK_ACK 5
+#define SHOP_REQ 6
+#define SHOP_ACK 7
 
+
+struct TaskQueue{
+    struct TaskNode* head;
+    struct TaskNode* tail;
+};
+
+struct TaskNode {
+    int taskId;
+    int giverId;
+    struct TaskNode* next;
+};
+
+struct AckStateTask {
+    struct AckStateNode* head;
+    struct AckStateNode* tail;
+};
+
+struct AckStateNode {
+    int taskId;
+    int giverId;
+    struct AckStateNode* next;
+    struct AckStateNode* prev;
+    taskStateNames* states;
+};
+
+void addAckState(struct AckStateTask *ackStateTask, int taskId, int giverId){
+    struct AckStateNode* newAckState = (struct AckStateNode*)malloc(sizeof(struct AckStateNode));
+    newAckState->taskId = taskId;
+    newAckState->giverId = giverId;
+    newAckState->states = (taskStateNames)malloc(sizeof(taskStateNames) * hunterTeamsNum);
+    for(int i = 0 ; i<hunterTeamsNum;i++){
+        newAckState->states[0] = REQUEST_NOT_SEND;
+    }
+    if(ackStateTask->head == NULL){
+        ackStateTask->head = newAckState;
+        ackStateTask->tail = newAckState;
+    }
+    else{
+        struct AckStateNode* lastNode = ackStateTask->tail;
+        ackStateTask->tail->next = newAckState;
+        ackStateTask->tail = newAckState;
+        ackStateTask->tail->prev = lastNode;
+    }
+}
+
+struct AckStateNode* getAckState(struct AckStateTask *ackStateTask, int taskId, int giverId){
+    struct AckStateNode* node;
+    node = ackStateTask->head;
+    while(node){
+        if(node->taskId == taskId && node->giverId == giverId){
+            return node;
+        }
+    }
+    return;
+    if(taskQueue->head){
+        struct TaskNode *tmp = taskQueue->head->next;
+       
+        struct TaskNode headCp;
+        headCp.taskId = taskQueue->head->taskId;
+        headCp.giverId = taskQueue->head->giverId;
+
+        free(taskQueue->head);
+        taskQueue->head=tmp;
+        if(tmp==NULL){
+            taskQueue->tail = NULL;
+        }
+        return headCp;
+    }
+    return;
+}
+
+// 0 - udalo sie usunac, -1 - nie udalo sie odnalezc wskazanego wezla
+int deleteAckState(struct AckStateTask *ackStateTask, int taskId, int giverId){
+    struct AckStateNode* node;
+    node = ackStateTask->head;
+    while(node){
+        if(node->taskId == taskId && node->giverId == giverId){
+            struct AckStateNode* prevNode = node->prev;
+            struct AckStateNode* nextNode = node->next;
+            free(node);
+            if(prevNode != NULL)
+                prevNode->next = nextNode;
+            if(nextNode != NULL)
+                nextNode->prev = prevNode;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+
+
+
+void addTask(struct TaskQueue *taskQueue, int taskId, int giverId);
+
+struct TaskNode getTask(struct TaskQueue *taskQueue);
 
 /* macro debug - działa jak printf, kiedy zdefiniowano
    DEBUG, kiedy DEBUG niezdefiniowane działa jak instrukcja pusta 
@@ -99,8 +196,12 @@ extern int zegar;
 extern int zegar2;
 #ifdef DEBUG
 #define debug(FORMAT,...) printf("%c[%d;%dm [tid %d ts %d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank,zegar, ##__VA_ARGS__, 27,0,37);
+#define debugGiver(FORMAT,...) printf("%c[%d;%dm [GIVER][tid %d ts %d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank,zegar, ##__VA_ARGS__, 27,0,37);
+#define debugHunter(FORMAT,...) printf("%c[%d;%dm [HUNTER][tid %d ts %d ts2 %d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank,zegar,zegar2, ##__VA_ARGS__, 27,0,37);
 #else
 #define debug(...) ;
+#define debugGiver(...) ;
+#define debugHunter(...) ;
 #endif
 
 #define P_WHITE printf("%c[%d;%dm",27,1,37);
@@ -119,8 +220,7 @@ extern int zegar2;
 /* wysyłanie pakietu, skrót: wskaźnik do pakietu (0 oznacza stwórz pusty pakiet), do kogo, z jakim typem */
 void sendPacket(packet_t *pkt, int destination, int tag);
 
-void sendPacket2(pakiet_t *pkt, int destination, int tag);
+void sendPacket2(packet_t *pkt, int destination, int tag);
 void changeState( state_t );
-void changeTallow( int );
-void changePrepared( int );
+void changeActiveTasks( int );
 #endif

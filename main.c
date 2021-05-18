@@ -10,7 +10,7 @@
 /* flagi dla open */
 //#include <fcntl.h>
 
-state_t stan=InRun;
+state_t stan;
 volatile char end = FALSE;
 int size,rank, tallow; /* nie trzeba zerować, bo zmienna globalna statyczna */
 MPI_Datatype MPI_PAKIET_T;
@@ -18,10 +18,14 @@ pthread_t threadKom, threadMon;
 
 int upperLimit, lowerLimit, hunterTeamsNum;
 
-
 int tallowPrepared;
 int numberReceivedP;
 
+// taskGiver
+int activeTasks;
+
+
+pthread_mutex_t activeTasksMut = PTHREAD_MUTEX_INITIALIZER;
 
 int zegar, zegar2;
 pthread_mutex_t lampMut = PTHREAD_MUTEX_INITIALIZER;
@@ -29,7 +33,38 @@ pthread_mutex_t lampMut2 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t senMut = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_mutex_t stateMut = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t tallowMut = PTHREAD_MUTEX_INITIALIZER;
+
+void addTask(struct TaskQueue *taskQueue, int taskId, int giverId){
+    struct TaskNode* newTask = (struct TaskNode*)malloc(sizeof(struct TaskNode));
+    newTask->taskId = taskId;
+    newTask->giverId = giverId;
+    if(taskQueue->head == NULL){
+        taskQueue->head = newTask;
+        taskQueue->tail = newTask;
+    }
+    else{
+        taskQueue->tail->next = newTask;
+        taskQueue->tail = newTask;
+    }
+}
+
+struct TaskNode getTask(struct TaskQueue *taskQueue){
+    if(taskQueue->head){
+        struct TaskNode *tmp = taskQueue->head->next;
+       
+        struct TaskNode headCp;
+        headCp.taskId = taskQueue->head->taskId;
+        headCp.giverId = taskQueue->head->giverId;
+
+        free(taskQueue->head);
+        taskQueue->head=tmp;
+        if(tmp==NULL){
+            taskQueue->tail = NULL;
+        }
+        return headCp;
+    }
+    return;
+}
 
 void check_thread_support(int provided)
 {
@@ -76,7 +111,7 @@ void inicjuj(int *argc, char ***argv)
     offsets[0] = offsetof(packet_t, ts);
     offsets[1] = offsetof(packet_t, src);
     offsets[2] = offsetof(packet_t, data);
-	offsets[3] = offsetof(packet_t,nowe_pole);
+	offsets[3] = offsetof(packet_t, data2);
 
     MPI_Type_create_struct(nitems, blocklengths, offsets, typy, &MPI_PAKIET_T);
     MPI_Type_commit(&MPI_PAKIET_T);
@@ -86,18 +121,22 @@ void inicjuj(int *argc, char ***argv)
     srand(rank);
 
     if(rank< atoi((*argv)[1])){
+        stan = InSearch;
         pthread_create( &threadKom, NULL, startKomWatekHunter , 0);
     } 
     else
     {
-         pthread_create( &threadKom, NULL, startKomWatekGiver , 0);
+        stan = InActive;
+        lowerLimit = atoi((*argv)[2]);
+        upperLimit = atoi((*argv)[3]);
+        activeTasks = 0;
+        pthread_create( &threadKom, NULL, startKomWatekGiver , 0);
     }
    
     if (rank==0) {
 	pthread_create( &threadMon, NULL, startMonitor, 0);
     }
-    debug("jestem");
-	printf("liczba: %d",*argc);
+
 }
 
 /* usunięcie zamkków, czeka, aż zakończy się drugi wątek, zwalnia przydzielony typ MPI_PAKIET_T
@@ -186,7 +225,7 @@ int setMaxLamport2(int new){
 		pthread_mutex_unlock(&lampMut2);
 		return zegar2;
 	}
-	zegar2 = (new>zegar2)?new:zegar2
+	zegar2 = (new>zegar2)?new:zegar2;
 	zegar2++;
 	int tmp = zegar2;
 	pthread_mutex_unlock(&lampMut2);
@@ -194,30 +233,16 @@ int setMaxLamport2(int new){
 }
 
 
-void changeTallow( int newTallow )
+void changeActiveTasks( int newActiveTasks )
 {
-    pthread_mutex_lock( &tallowMut );
+    pthread_mutex_lock( &activeTasksMut );
     if (stan==InFinish) { 
-	pthread_mutex_unlock( &tallowMut );
+	pthread_mutex_unlock( &activeTasksMut );
         return;
     }
-    tallow += newTallow;
-    pthread_mutex_unlock( &tallowMut );
+    activeTasks += newActiveTasks;
+    pthread_mutex_unlock( &activeTasksMut );
 }
-
-
-void changePrepared( int logic )
-{
-    pthread_mutex_lock( &senMut );
-    if (stan==InFinish) { 
-	pthread_mutex_unlock( &senMut );
-        return;
-    }
-     tallowPrepared = logic;
-	
-    pthread_mutex_unlock( &senMut );
-}
-
 
 void changeState( state_t newState )
 {

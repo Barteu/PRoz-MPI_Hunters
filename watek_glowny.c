@@ -7,24 +7,21 @@ void mainLoopGiver()
 {
     srandom(rank);
 	taskId = 0;
-	activeTasksMut =  = PTHREAD_MUTEX_INITIALIZER;
     while (stan != InFinish) {
         int sleepTime = 1 + random()%5; 
         if (stan==InActive) {
-			debug("Jestem w stanie Active");
+			debugGiver("Jestem w stanie Active");
 			// Wysylam BROADCAST
-			debug("Wysylam BROADCAST");
+			debugGiver("Wysylam BROADCAST");
 			packet_t *message = malloc(sizeof(packet_t));
 			message->data = taskId; // ID zlecenia
 			message->data2 = rank; // ID zleceniodawcy
 			for(int i = 0; i < hunterTeamsNum; i++){
 				sendPacket(message, i, BROADCAST);
 			}
-			debug("BROADCAST wyslany");
+			debugGiver("BROADCAST wyslany");
 			taskId++;
-			pthread_mutex_lock(&activeTasksMut);
-			activeTasks++;
-			pthread_mutex_unlock(&activeTasksMut);
+			changeActiveTasks(1);
 			free(message);
 			if(activeTasks > upperLimit){
 				changeState(InOverload);
@@ -34,7 +31,7 @@ void mainLoopGiver()
 			}
 		}
 		else if(stan==InOverload){
-			debug("Jestem w stanie Overload");
+			debugGiver("Jestem w stanie Overload");
 			pthread_mutex_lock(&activeTasksMut);
 			if(activeTasks < lowerLimit){
 				pthread_mutex_unlock(&activeTasksMut);
@@ -84,5 +81,9 @@ void mainLoopGiver()
 void mainLoopHunter(){
 	while(stan!=InFinish){
 		// cos tam robi
+		if(stan==InSearch){
+			debugHunter("Jestem w stanie SEARCH");
+			sleep(5);
+		}
 	}
 }
