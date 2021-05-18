@@ -12,14 +12,17 @@
 
 state_t stan;
 volatile char end = FALSE;
-int size,rank, tallow; /* nie trzeba zerować, bo zmienna globalna statyczna */
+int size,rank; /* nie trzeba zerować, bo zmienna globalna statyczna */
 MPI_Datatype MPI_PAKIET_T;
 pthread_t threadKom, threadMon;
 
-int upperLimit, lowerLimit, hunterTeamsNum;
+int upperLimit, lowerLimit, hunterTeamsNum, shopSize;
 
-int tallowPrepared;
-int numberReceivedP;
+struct TaskQueue taskQueue;
+struct AckStateTask ackStateTask;
+struct RequestPriorityTask requestPriorityTask;
+
+
 
 // taskGiver
 int activeTasks;
@@ -34,7 +37,12 @@ pthread_mutex_t senMut = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_mutex_t stateMut = PTHREAD_MUTEX_INITIALIZER;
 
+pthread_mutex_t taskQueueMut = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t ackStateTaskMut = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t requestPriorityTaskMut = PTHREAD_MUTEX_INITIALIZER;
+
 void addTask(struct TaskQueue *taskQueue, int taskId, int giverId){
+    pthread_mutex_lock(&taskQueueMut);
     struct TaskNode* newTask = (struct TaskNode*)malloc(sizeof(struct TaskNode));
     newTask->taskId = taskId;
     newTask->giverId = giverId;
@@ -46,9 +54,11 @@ void addTask(struct TaskQueue *taskQueue, int taskId, int giverId){
         taskQueue->tail->next = newTask;
         taskQueue->tail = newTask;
     }
+    pthread_mutex_unlock(&taskQueueMut);
 }
 
 struct TaskNode getTask(struct TaskQueue *taskQueue){
+    pthread_mutex_lock(&taskQueueMut);
     if(taskQueue->head){
         struct TaskNode *tmp = taskQueue->head->next;
        
@@ -61,10 +71,190 @@ struct TaskNode getTask(struct TaskQueue *taskQueue){
         if(tmp==NULL){
             taskQueue->tail = NULL;
         }
+        pthread_mutex_unlock(&taskQueueMut);
         return headCp;
     }
+    pthread_mutex_unlock(&taskQueueMut);
     return;
 }
+
+void addAckState(struct AckStateTask *ackStateTask, int taskId, int giverId){
+    pthread_mutex_lock(&ackStateTaskMut);
+    struct AckStateNode* newAckState = (struct AckStateNode*)malloc(sizeof(struct AckStateNode));
+    newAckState->taskId = taskId;
+    newAckState->giverId = giverId;
+    newAckState->states = (taskStateNames)malloc(sizeof(taskStateNames) * hunterTeamsNum);
+    for(int i = 0 ; i<hunterTeamsNum;i++){
+        newAckState->states[i] = REQUEST_NOT_SEND;
+    }
+    if(ackStateTask->head == NULL){
+        ackStateTask->head = newAckState;
+        ackStateTask->tail = newAckState;
+    }
+    else{
+        struct AckStateNode* lastNode = ackStateTask->tail;
+        ackStateTask->tail->next = newAckState;
+        ackStateTask->tail = newAckState;
+        ackStateTask->tail->prev = lastNode;
+    }
+    pthread_mutex_unlock(&ackStateTaskMut);
+}
+
+// struct AckStateNode getAckState(struct AckStateTask *ackStateTask, int taskId, int giverId){
+//     pthread_mutex_lock(&ackStateTaskMut);
+//     struct AckStateNode* node;
+//     node = ackStateTask->head;
+//     while(node){
+//         if(node->taskId == taskId && node->giverId == giverId){
+//             struct AckStateNode tmp;
+//             tmp.taskId = node->taskId;
+//             tmp.giverId = node->giverId;
+//             tmp.states = (taskStateNames)malloc(sizeof(taskStateNames) * hunterTeamsNum);
+//             for(int i = 0; i < hunterTeamsNum; i++){
+//                 tmp.states[i] = node->states[i];
+//             }
+//             pthread_mutex_unlock(&ackStateTaskMut);
+//             return tmp;
+//         }
+//         node = node->next;
+//     }
+//     pthread_mutex_unlock(&ackStateTaskMut);
+//     return;
+// }
+
+taskStateNames getAckStateByHunter(struct AckStateTask *ackStateTask, int taskId, int giverId, int hunterId){
+    pthread_mutex_lock(&ackStateTaskMut);
+    struct AckStateNode* node;
+    node = ackStateTask->head;
+    while(node){
+        if(node->taskId == taskId && node->giverId == giverId){  
+            taskStateNames tmpState = node->states[hunterId];
+            pthread_mutex_unlock(&ackStateTaskMut);
+            return tmpState;
+        }
+        node = node->next;
+    }
+    pthread_mutex_unlock(&ackStateTaskMut);
+    return -1;
+}
+
+
+
+// 1 - udalo sie usunac, 0 - nie udalo sie odnalezc wskazanego wezla
+int deleteAckState(struct AckStateTask *ackStateTask, int taskId, int giverId){
+    pthread_mutex_lock(&ackStateTaskMut);
+    struct AckStateNode* node;
+    node = ackStateTask->head;
+    while(node){
+        if(node->taskId == taskId && node->giverId == giverId){
+            struct AckStateNode* prevNode = node->prev;
+            struct AckStateNode* nextNode = node->next;
+
+            free(node);
+            if(prevNode != NULL)
+                prevNode->next = nextNode;
+            else{
+                ackStateTask->head = nextNode;
+            }
+            if(nextNode != NULL)
+                nextNode->prev = prevNode;
+            else{
+                ackStateTask->tail = nextNode;
+            }
+            pthread_mutex_unlock(&ackStateTaskMut);
+            return 1;
+        }
+        node = node->next;
+    }
+    pthread_mutex_unlock(&ackStateTaskMut);
+    return 0;
+}
+
+void addRequestPriority(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId){
+     pthread_mutex_lock(&lampMut);
+     pthread_mutex_lock(&requestPriorityTaskMut);
+    struct RequestPriorityNode* newRequestPriority = (struct RequestPriorityNode*)malloc(sizeof(struct RequestPriorityNode));
+    newRequestPriority->taskId = taskId;
+    newRequestPriority->giverId = giverId;
+    newRequestPriority->priorities = (taskStateNames)malloc(sizeof(int) * hunterTeamsNum);
+    for(int i = 0 ; i<hunterTeamsNum;i++){
+         newRequestPriority->priorities[i] = -1;
+    }
+    newRequestPriority->priorities[rank] = zegar;
+    if(requestPriorityTask->head == NULL){
+        requestPriorityTask->head = newRequestPriority;
+        requestPriorityTask->tail = newRequestPriority;
+    }
+    else{
+        struct RequestPriorityNode* lastNode = requestPriorityTask->tail;
+        requestPriorityTask->tail->next =  newRequestPriority;
+        requestPriorityTask->tail =  newRequestPriority;
+        requestPriorityTask->tail->prev = lastNode;
+    }
+    pthread_mutex_unlock(&requestPriorityTaskMut);
+    pthread_mutex_unlock(&lampMut);
+}
+
+// struct RequestPriorityNode* getRequestPriority(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId){
+//     pthread_mutex_lock(&requestPriorityTaskMut);
+//     struct RequestPriorityNode* node;
+//     node = requestPriorityTask->head;
+//     while(node){
+//         if(node->taskId == taskId && node->giverId == giverId){
+//             return node;
+//         }
+//         node = node->next;
+//     }
+//     pthread_mutex_unlock(&requestPriorityTaskMut);
+//     return;
+// }
+
+
+ int getRequestPriorityByHunter(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId, int hunterId){
+    pthread_mutex_lock(&requestPriorityTaskMut);
+    struct RequestPriorityNode *node;
+    node = requestPriorityTask->head;
+    while(node){
+        if(node->taskId == taskId && node->giverId == giverId){
+            int tmpPriority = node->priorities[hunterId];
+            pthread_mutex_unlock(&requestPriorityTaskMut);
+            return tmpPriority;
+        }
+        node = node->next;
+    }
+    pthread_mutex_unlock(&requestPriorityTaskMut);
+    return -1;
+}
+
+// 1 - udalo sie usunac, 0 - nie udalo sie odnalezc wskazanego wezla
+int deleteRequestPriority(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId){
+    pthread_mutex_lock(&requestPriorityTask);
+    struct RequestPriorityNode* node;
+    node = requestPriorityTask->head;
+    while(node){
+        if(node->taskId == taskId && node->giverId == giverId){
+            struct RequestPriorityNode* prevNode = node->prev;
+            struct RequestPriorityNode* nextNode = node->next;
+            free(node);
+            if(prevNode != NULL)
+                prevNode->next = nextNode;
+            else{
+                requestPriorityTask->head = nextNode;
+            }
+            if(nextNode != NULL)
+                nextNode->prev = prevNode;
+            else{
+                requestPriorityTask->tail = nextNode;
+            }
+            pthread_mutex_unlock(&requestPriorityTask);
+            return 1;
+        }
+        node = node->next;
+    }
+    pthread_mutex_unlock(&requestPriorityTask);
+    return 0;
+}
+
 
 void check_thread_support(int provided)
 {
@@ -103,15 +293,16 @@ void inicjuj(int *argc, char ***argv)
        brzydzimy się czymś w rodzaju MPI_Send(&typ, sizeof(pakiet_t), MPI_BYTE....
     */
     /* sklejone z stackoverflow */
-    const int nitems=4; /* bo packet_t ma trzy pola */
-    int       blocklengths[4] = {1,1,1,1};
-    MPI_Datatype typy[4] = {MPI_INT, MPI_INT, MPI_INT,MPI_INT};
+    const int nitems=5; /* bo packet_t ma trzy pola */
+    int       blocklengths[5] = {1,1,1,1,1};
+    MPI_Datatype typy[5] = {MPI_INT, MPI_INT, MPI_INT,MPI_INT, MPI_INT};
 
-    MPI_Aint     offsets[4]; 
+    MPI_Aint     offsets[5]; 
     offsets[0] = offsetof(packet_t, ts);
     offsets[1] = offsetof(packet_t, src);
     offsets[2] = offsetof(packet_t, data);
 	offsets[3] = offsetof(packet_t, data2);
+    offsets[4] = offsetof(packet_t, priority);
 
     MPI_Type_create_struct(nitems, blocklengths, offsets, typy, &MPI_PAKIET_T);
     MPI_Type_commit(&MPI_PAKIET_T);
@@ -120,7 +311,14 @@ void inicjuj(int *argc, char ***argv)
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     srand(rank);
 
+    shopSize = atoi((*argv)[4]);
     if(rank< atoi((*argv)[1])){
+        taskQueue.head = NULL;
+        taskQueue.tail = NULL;
+        ackStateTask.head = NULL;
+        ackStateTask.tail = NULL;
+        requestPriorityTask.head = NULL;
+        requestPriorityTask.tail = NULL;
         stan = InSearch;
         pthread_create( &threadKom, NULL, startKomWatekHunter , 0);
     } 

@@ -28,6 +28,11 @@ extern int hunterTeamsNum;
 
 extern pthread_mutex_t activeTasksMut;
 
+extern pthread_mutex_t taskQueueMut;
+extern pthread_mutex_t ackStateTaskMut;
+extern pthread_mutex_t requestPriorityTaskMut;
+
+
 
 /* stany procesu */
 typedef enum {InActive, InOverload, InSearch,InWait, InShop,InTask, InFinish} state_t;
@@ -41,13 +46,9 @@ extern taskStateNames taskState;
 /* Ile mamy aktywnych zlecen */
 extern int activeTasks;
 
-/* stan globalny wykryty przez monitor */
-extern int globalState;
-/* ilu już odpowiedziało na GIVEMESTATE */
-extern int numberReceived;
+/* Sklep */
+extern int shopSize;
 
-extern int tallowPrepared;
-extern int numberReceivedP;
 
 
 /* to może przeniesiemy do global... */
@@ -58,7 +59,10 @@ typedef struct {
     int data;     /* przykładowe pole z danymi; można zmienić nazwę na bardziej pasującą */
 	
 	int data2;
+
+    int priority;
 } packet_t;
+
 extern MPI_Datatype MPI_PAKIET_T;
 
 /* Typy wiadomości */
@@ -95,73 +99,35 @@ struct AckStateNode {
     taskStateNames* states;
 };
 
-void addAckState(struct AckStateTask *ackStateTask, int taskId, int giverId){
-    struct AckStateNode* newAckState = (struct AckStateNode*)malloc(sizeof(struct AckStateNode));
-    newAckState->taskId = taskId;
-    newAckState->giverId = giverId;
-    newAckState->states = (taskStateNames)malloc(sizeof(taskStateNames) * hunterTeamsNum);
-    for(int i = 0 ; i<hunterTeamsNum;i++){
-        newAckState->states[0] = REQUEST_NOT_SEND;
-    }
-    if(ackStateTask->head == NULL){
-        ackStateTask->head = newAckState;
-        ackStateTask->tail = newAckState;
-    }
-    else{
-        struct AckStateNode* lastNode = ackStateTask->tail;
-        ackStateTask->tail->next = newAckState;
-        ackStateTask->tail = newAckState;
-        ackStateTask->tail->prev = lastNode;
-    }
-}
+struct RequestPriorityTask{
+    struct RequestPriorityNode* head;
+    struct RequestPriorityNode* tail;
+};
 
-struct AckStateNode* getAckState(struct AckStateTask *ackStateTask, int taskId, int giverId){
-    struct AckStateNode* node;
-    node = ackStateTask->head;
-    while(node){
-        if(node->taskId == taskId && node->giverId == giverId){
-            return node;
-        }
-    }
-    return;
-    if(taskQueue->head){
-        struct TaskNode *tmp = taskQueue->head->next;
-       
-        struct TaskNode headCp;
-        headCp.taskId = taskQueue->head->taskId;
-        headCp.giverId = taskQueue->head->giverId;
+struct RequestPriorityNode {
+    int* priorities;
+    int taskId;
+    int giverId;
+    struct RequestPriorityNode* next;
+    struct RequestPriorityNode* prev;
+};
 
-        free(taskQueue->head);
-        taskQueue->head=tmp;
-        if(tmp==NULL){
-            taskQueue->tail = NULL;
-        }
-        return headCp;
-    }
-    return;
-}
+extern struct TaskQueue taskQueue;
+extern struct AckStateTask ackStateTask;
+extern struct RequestPriorityTask requestPriorityTask;
 
-// 0 - udalo sie usunac, -1 - nie udalo sie odnalezc wskazanego wezla
-int deleteAckState(struct AckStateTask *ackStateTask, int taskId, int giverId){
-    struct AckStateNode* node;
-    node = ackStateTask->head;
-    while(node){
-        if(node->taskId == taskId && node->giverId == giverId){
-            struct AckStateNode* prevNode = node->prev;
-            struct AckStateNode* nextNode = node->next;
-            free(node);
-            if(prevNode != NULL)
-                prevNode->next = nextNode;
-            if(nextNode != NULL)
-                nextNode->prev = prevNode;
-            return 0;
-        }
-    }
-    return -1;
-}
+void addRequestPriority(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId);
+//struct RequestPriorityNode getRequestPriority(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId);
+int getRequestPriorityByHunter(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId, int hunterId);
+int setRequestPriorityByHunter(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId, int hunterId, int priority);
 
+int deleteRequestPriority(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId);
+void addAckState(struct AckStateTask *ackStateTask, int taskId, int giverId);
 
+//struct AckStateNode* getAckState(struct AckStateTask *ackStateTask, int taskId, int giverId);
+taskStateNames getAckStateByHunter(struct AckStateTask *ackStateTask, int taskId, int giverId, int hunterId);
 
+void setAckStateByHunter(struct AckStateTask *ackStateTask, int taskId, int giverId, int hunterId, taskStateNames state);int deleteAckState(struct AckStateTask *ackStateTask, int taskId, int giverId);
 
 void addTask(struct TaskQueue *taskQueue, int taskId, int giverId);
 

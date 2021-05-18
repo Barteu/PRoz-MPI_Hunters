@@ -36,14 +36,78 @@ void* startKomWatekHunter(void* ptr){
 		// Aktualizujemy zegar Lamporta procesu Lowcy
 		setMaxLamport(pakiet.ts);
 		
-		switch ( status.MPI_TAG ) {
-		case END:
-			changeState(InFinish);
-			break;
-		case BROADCAST:
-			debugHunter("Dostałem wiadomość od %d o ID zlecenia %d typu BROADCAST", pakiet.src, pakiet.data);
-			break;
+
+		if(stan==InSearch){
+
+			switch ( status.MPI_TAG ) {
+			case END:
+				changeState(InFinish);
+				break;
+			case BROADCAST:
+				debugHunter("Dostałem wiadomość od %d o ID zlecenia %d typu BROADCAST", pakiet.src, pakiet.data);
+				
+				addAckState(&ackStateTask, pakiet.data, pakiet.src);
+				addRequestPriority(&requestPriorityTask, pakiet.data,pakiet.src);
+				
+				pakiet.priority = getRequestPriorityByHunter(&requestPriorityTask, pakiet.data, pakiet.data2, rank);
+				
+				for(int i = 0; i < hunterTeamsNum; i++){
+					if(i!=rank){
+						if(getAckStateByHunter(&ackStateTask, pakiet.data, pakiet.data2, i) == REQUEST_NOT_SEND)
+						{
+							sendPacket(&pakiet, i, TASK_REQ);
+							setAckStateByHunter(&ackStateTask, pakiet.data, pakiet.data2, i, REQUEST_SEND);
+						}
+					}
+				}
+				break;
+			case TASK_REQ:
+				debugHunter("Dostałem wiadomość od %d o ID zlecenia %d, ID zleceniodawcy %d i priorytecie %d typu TASK_REQ", pakiet.src, pakiet.data, pakiet.data2, pakiet.priority);
+				int myPriority = getRequestPriorityByHunter(&requestPriorityTask, pakiet.data, pakiet.data2, rank);
+				if(myPriority != -1){
+					if(myPriority > pakiet.priority){
+						setAckStateByHunter(&ackStateTask,pakiet.data,pakiet.data2, pakiet.src, ACK_RECEIVED);
+						setRequestPriorityByHunter(&requestPriorityTask, pakiet.data, pakiet.data2, pakiet.src, pakiet.priority);
+					}
+				}
+				else
+				{
+					sendPacket(&pakiet, pakiet.src, TASK_ACK);
+				}
+				break;
+			case TASK_ACK:
+				debugHunter("Dostałem wiadomość od %d o ID zlecenia %d, ID zleceniodawcy %d typu TASK_ACK", pakiet.src, pakiet.data, pakiet.data2);
+
+				setAckStateByHunter(&ackStateTask,pakiet.data,pakiet.data2, pakiet.src, ACK_RECEIVED);
+				break;
+			case FIN:
+				debugHunter("Dostałem wiadomość od %d o zakonczeniu zlecenia o id %d, ID zleceniodawcy %d typu FIN", pakiet.src, pakiet.data, pakiet.data2);
+				deleteAckState(&ackStateTask, pakiet.data, pakiet.data2);
+				deleteRequestPriority(&requestPriorityTask, pakiet.data, pakiet.data2);
+				break;
+			}
+
 		}
+		else if(stan==InWait){
+			switch(status.MPI_TAG){
+			case END:
+				changeState(InFinish);
+				break;
+			case BROADCAST:
+				
+				break;
+			}
+		}
+		else if(stan==InShop){
+
+		}
+		else if(stan==InTask){
+
+		}
+
+
+
+
 
 	}
 }
