@@ -83,6 +83,10 @@ void mainLoopHunter(){
 		// cos tam robi
 		if(stan==InSearch){
 			debugHunter("Jestem w stanie SEARCH");
+			sleep(8);
+		}
+		else if(stan==InWait){
+			debugHunter("Jestem w stanie WAIT");
 			sleep(5);
 		}
 	}

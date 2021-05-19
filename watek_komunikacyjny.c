@@ -49,7 +49,7 @@ void* startKomWatekHunter(void* ptr){
 				addAckState(&ackStateTask, pakiet.data, pakiet.src);
 				addRequestPriority(&requestPriorityTask, pakiet.data,pakiet.src);
 				
-				pakiet.priority = getRequestPriorityByHunter(&requestPriorityTask, pakiet.data, pakiet.data2, rank);
+				pakiet.priority = getRequestPriorityByHunter(&requestPriorityTask, pakiet.data, pakiet.src, rank);
 				
 				for(int i = 0; i < hunterTeamsNum; i++){
 					if(i!=rank){
@@ -65,20 +65,35 @@ void* startKomWatekHunter(void* ptr){
 				debugHunter("Dostałem wiadomość od %d o ID zlecenia %d, ID zleceniodawcy %d i priorytecie %d typu TASK_REQ", pakiet.src, pakiet.data, pakiet.data2, pakiet.priority);
 				int myPriority = getRequestPriorityByHunter(&requestPriorityTask, pakiet.data, pakiet.data2, rank);
 				if(myPriority != -1){
-					if(myPriority > pakiet.priority){
+					if(myPriority < pakiet.priority || (myPriority==pakiet.priority && rank<pakiet.src) ){
+						debugHunter("TASK_REQ staje sie ACK dla ID zlecenia %d, ID zleceniodawcy %d", pakiet.data, pakiet.data2);
 						setAckStateByHunter(&ackStateTask,pakiet.data,pakiet.data2, pakiet.src, ACK_RECEIVED);
 						setRequestPriorityByHunter(&requestPriorityTask, pakiet.data, pakiet.data2, pakiet.src, pakiet.priority);
+						//sprawdzamy czy nie mozemy przyjac tego zlecenia
+						if(getAckStateTask(&ackStateTask,pakiet.data,pakiet.data2)){
+							debugHunter("Zlecenie id %d od %d przyjete", pakiet.data, pakiet.data2);
+							addTask(&taskQueue, pakiet.data, pakiet.data2);
+							forwardAllAck(&requestPriorityTask, &ackStateTask,pakiet.data, pakiet.data2);
+							changeState(InWait);
+							
+						}
 					}
 				}
 				else
 				{
 					sendPacket(&pakiet, pakiet.src, TASK_ACK);
+					debugHunter("Wyslalaem ACK do %d dla ID zlecenia %d , ID zleceniodawcy %d",pakiet.src,pakiet.data,pakiet.data2);
 				}
 				break;
 			case TASK_ACK:
 				debugHunter("Dostałem wiadomość od %d o ID zlecenia %d, ID zleceniodawcy %d typu TASK_ACK", pakiet.src, pakiet.data, pakiet.data2);
-
 				setAckStateByHunter(&ackStateTask,pakiet.data,pakiet.data2, pakiet.src, ACK_RECEIVED);
+				//sprawdzamy czy nie mozemy przyjac tego zlecenia
+				if(getAckStateTask(&ackStateTask,pakiet.data,pakiet.data2)){
+					addTask(&taskQueue, pakiet.data, pakiet.data2);
+					forwardAllAck(&requestPriorityTask, &ackStateTask,pakiet.data, pakiet.data2);
+					changeState(InWait);
+				}
 				break;
 			case FIN:
 				debugHunter("Dostałem wiadomość od %d o zakonczeniu zlecenia o id %d, ID zleceniodawcy %d typu FIN", pakiet.src, pakiet.data, pakiet.data2);
@@ -94,15 +109,125 @@ void* startKomWatekHunter(void* ptr){
 				changeState(InFinish);
 				break;
 			case BROADCAST:
+				debugHunter("Dostałem wiadomość od %d o ID zlecenia %d typu BROADCAST", pakiet.src, pakiet.data);
 				
+				addAckState(&ackStateTask, pakiet.data, pakiet.src);
+				addRequestPriority(&requestPriorityTask, pakiet.data,pakiet.src);
+				break;
+			
+			case TASK_REQ:
+				if(!isTaskInQueue(&taskQueue,pakiet.data, pakiet.data2))
+				{
+					sendPacket(&pakiet, pakiet.src, TASK_ACK);
+					forwardAck(&requestPriorityTask, &ackStateTask, pakiet.data, pakiet.data2, REQUEST_NOT_SEND);
+				}
+				break;
+			
+			case TASK_ACK:
+				debugHunter("Dostałem wiadomość od %d o ID zlecenia %d, ID zleceniodawcy %d typu TASK_ACK", pakiet.src, pakiet.data, pakiet.data2);
+				setAckStateByHunter(&ackStateTask,pakiet.data,pakiet.data2, pakiet.src, ACK_RECEIVED);
+				//sprawdzamy czy nie mozemy przyjac tego zlecenia
+				if(getAckStateTask(&ackStateTask,pakiet.data,pakiet.data2)){
+					if(isTaskRequested(&requestPriorityTask, pakiet.data, pakiet.data2)){
+						forwardAck(&requestPriorityTask, &ackStateTask, pakiet.data, pakiet.data2, REJECTED);
+
+					}else{
+						addTask(&taskQueue, pakiet.data, pakiet.data2);
+					}
+					
+				}
+				break;
+			
+			case FIN:
+				debugHunter("Dostałem wiadomość od %d o zakonczeniu zlecenia o id %d, ID zleceniodawcy %d typu FIN", pakiet.src, pakiet.data, pakiet.data2);
+				deleteAckState(&ackStateTask, pakiet.data, pakiet.data2);
+				deleteRequestPriority(&requestPriorityTask, pakiet.data, pakiet.data2);
 				break;
 			}
 		}
 		else if(stan==InShop){
+			switch(status.MPI_TAG){
+			case END:
+				changeState(InFinish);
+				break;
+			case BROADCAST:
+				debugHunter("Dostałem wiadomość od %d o ID zlecenia %d typu BROADCAST", pakiet.src, pakiet.data);
+				
+				addAckState(&ackStateTask, pakiet.data, pakiet.src);
+				addRequestPriority(&requestPriorityTask, pakiet.data,pakiet.src);
+				break;
+			
+			case TASK_REQ:
+				if(!isTaskInQueue(&taskQueue,pakiet.data, pakiet.data2))
+				{
+					sendPacket(&pakiet, pakiet.src, TASK_ACK);
+					forwardAck(&requestPriorityTask, &ackStateTask, pakiet.data, pakiet.data2, REQUEST_NOT_SEND);
+				}
+				break;
+			
+			case TASK_ACK:
+				debugHunter("Dostałem wiadomość od %d o ID zlecenia %d, ID zleceniodawcy %d typu TASK_ACK", pakiet.src, pakiet.data, pakiet.data2);
+				setAckStateByHunter(&ackStateTask,pakiet.data,pakiet.data2, pakiet.src, ACK_RECEIVED);
+				//sprawdzamy czy nie mozemy przyjac tego zlecenia
+				if(getAckStateTask(&ackStateTask,pakiet.data,pakiet.data2)){
+					if(isTaskRequested(&requestPriorityTask, pakiet.data, pakiet.data2)){
+						forwardAck(&requestPriorityTask, &ackStateTask, pakiet.data, pakiet.data2, REJECTED);
 
+					}else{
+						addTask(&taskQueue, pakiet.data, pakiet.data2);
+					}
+					
+				}
+				break;
+			
+			case FIN:
+				debugHunter("Dostałem wiadomość od %d o zakonczeniu zlecenia o id %d, ID zleceniodawcy %d typu FIN", pakiet.src, pakiet.data, pakiet.data2);
+				deleteAckState(&ackStateTask, pakiet.data, pakiet.data2);
+				deleteRequestPriority(&requestPriorityTask, pakiet.data, pakiet.data2);
+				break;
+			}
 		}
 		else if(stan==InTask){
+			switch(status.MPI_TAG){
+			case END:
+				changeState(InFinish);
+				break;
+			case BROADCAST:
+				debugHunter("Dostałem wiadomość od %d o ID zlecenia %d typu BROADCAST", pakiet.src, pakiet.data);
+				
+				addAckState(&ackStateTask, pakiet.data, pakiet.src);
+				addRequestPriority(&requestPriorityTask, pakiet.data,pakiet.src);
+				break;
+			
+			case TASK_REQ:
+				if(!isTaskInQueue(&taskQueue,pakiet.data, pakiet.data2))
+				{
+					sendPacket(&pakiet, pakiet.src, TASK_ACK);
+					forwardAck(&requestPriorityTask, &ackStateTask, pakiet.data, pakiet.data2, REQUEST_NOT_SEND);
+				}
+				break;
+			
+			case TASK_ACK:
+				debugHunter("Dostałem wiadomość od %d o ID zlecenia %d, ID zleceniodawcy %d typu TASK_ACK", pakiet.src, pakiet.data, pakiet.data2);
+				setAckStateByHunter(&ackStateTask,pakiet.data,pakiet.data2, pakiet.src, ACK_RECEIVED);
+				//sprawdzamy czy nie mozemy przyjac tego zlecenia
+				if(getAckStateTask(&ackStateTask,pakiet.data,pakiet.data2)){
+					if(isTaskRequested(&requestPriorityTask, pakiet.data, pakiet.data2)){
+						forwardAck(&requestPriorityTask, &ackStateTask, pakiet.data, pakiet.data2, REJECTED);
 
+					}else{
+						addTask(&taskQueue, pakiet.data, pakiet.data2);
+					}
+					
+				}
+				break;
+			
+			case FIN:
+				debugHunter("Dostałem wiadomość od %d o zakonczeniu zlecenia o id %d, ID zleceniodawcy %d typu FIN", pakiet.src, pakiet.data, pakiet.data2);
+				deleteAckState(&ackStateTask, pakiet.data, pakiet.data2);
+				deleteRequestPriority(&requestPriorityTask, pakiet.data, pakiet.data2);
+				break;
+			}
 		}
 
 
