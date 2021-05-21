@@ -45,6 +45,9 @@ pthread_mutex_t taskQueueMut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t ackStateTaskMut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t requestPriorityTaskMut = PTHREAD_MUTEX_INITIALIZER;
 
+pthread_mutex_t sleepMut = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
 
 
 void check_thread_support(int provided)

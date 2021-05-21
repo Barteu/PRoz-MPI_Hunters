@@ -3,8 +3,6 @@
 
 
 
-
-
 void addTask(struct TaskQueue *taskQueue, int taskId, int giverId){
     pthread_mutex_lock(&taskQueueMut);
     struct TaskNode* newTask = (struct TaskNode*)malloc(sizeof(struct TaskNode));
@@ -83,10 +81,12 @@ void addAckState(struct AckStateTask *ackStateTask, int taskId, int giverId){
         ackStateTask->tail = newAckState;
     }
     else{
+     
         struct AckStateNode* lastNode = ackStateTask->tail;
         ackStateTask->tail->next = newAckState;
         ackStateTask->tail = newAckState;
         ackStateTask->tail->prev = lastNode;
+      
     }
     pthread_mutex_unlock(&ackStateTaskMut);
 }
@@ -269,7 +269,8 @@ int deleteAckState(struct AckStateTask *ackStateTask, int taskId, int giverId){
             if(nextNode != NULL)
                 nextNode->prev = prevNode;
             else{
-                ackStateTask->tail = nextNode;
+                // IDK
+                ackStateTask->tail = prevNode;
             }
             pthread_mutex_unlock(&ackStateTaskMut);
             return 1;
@@ -391,7 +392,7 @@ int deleteRequestPriority(struct RequestPriorityTask *requestPriorityTask, int t
             if(nextNode != NULL)
                 nextNode->prev = prevNode;
             else{
-                requestPriorityTask->tail = nextNode;
+                requestPriorityTask->tail = prevNode;
             }
             pthread_mutex_unlock(&requestPriorityTaskMut);
             return 1;

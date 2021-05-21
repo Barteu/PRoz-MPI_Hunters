@@ -19,7 +19,7 @@ void mainLoopGiver()
 			for(int i = 0; i < hunterTeamsNum; i++){
 				sendPacket(&message, i, BROADCAST);
 			}
-			debugGiver("BROADCAST [tid:%d, taskId:%d] wyslany" , rank,taskId);
+			debugGiver("BROADCAST {taskId:%d, giverId:%d} wyslany" , taskId,rank);
 			taskId++;
 			changeActiveTasks(1);
 			
@@ -32,49 +32,11 @@ void mainLoopGiver()
 		}
 		else if(stan==InOverload){
 			debugGiver("Jestem w stanie Overload");
-			pthread_mutex_lock(&activeTasksMut);
-			if(activeTasks < lowerLimit){
-				pthread_mutex_unlock(&activeTasksMut);
-				changeState(InActive);
-			}
-			else{
-				pthread_mutex_unlock(&activeTasksMut);
-			}
-			sleep(1);
-			// Tutaj chyba aktywne czekanie jest, nie wiem czy moze byc :/ ?
+			pthread_mutex_lock(&sleepMut);
+			pthread_cond_wait(&cond, &sleepMut);
+			pthread_mutex_unlock(&sleepMut);
 		}
-		/*debug("Zmieniam stan na wysyłanie");
-		changeState( InSend );
-		packet_t *pkt = malloc(sizeof(packet_t));
-		pkt->data = perc;
-                changeTallow( -perc);
-                sleep( SEC_IN_STATE); // to nam zasymuluje, że wiadomość trochę leci w kanale
-                                      // bez tego algorytm formalnie błędny za każdym razem dawałby poprawny wynik
-		sendPacket( pkt, (rank+1)%size,TALLOWTRANSPORT);
-		changeState( InRun );
-		debug("Skończyłem wysyłać");
-            } 
-			else if(stan==InTallows)
-			{
-				if(tallowPrepared==0)
-				{
-				changePrepared(TRUE);
-					
-				packet_t *pkt = malloc(sizeof(packet_t));
-				pkt->data = 1;
-                sleep( SEC_IN_STATE); // to nam zasymuluje, że wiadomość trochę leci w kanale
-                                      // bez tego algorytm formalnie błędny za każdym razem dawałby poprawny wynik
-				sendPacket( pkt,0,TALLOWPREPSTATE);
-
-				debug("Wysyłam info że juz skończyłem wysyłać");
-				
-					
-				}
-				
-				
-            }
-        }
-        sleep(SEC_IN_STATE);*/
+	
     }
 }
 
@@ -83,23 +45,26 @@ void mainLoopHunter(){
 		// cos tam robi
 		if(stan==InSearch){
 			debugHunter("Jestem w stanie SEARCH");
-			sleep(5);
+			pthread_mutex_lock(&sleepMut);
+			pthread_cond_wait(&cond, &sleepMut);
+			pthread_mutex_unlock(&sleepMut);
 		}
 		else if(stan==InWait){
 			debugHunter("Jestem w stanie WAIT");
-			sleep(5);
+			pthread_mutex_lock(&sleepMut);
+			pthread_cond_wait(&cond, &sleepMut);
+			pthread_mutex_unlock(&sleepMut);
 		}
 		else if(stan==InShop){
-			debugHunter("Jestem w stanie INSHOP");
+			debugHunter("Jestem w stanie SHOP");
 			srandom(rank);
         	int sleepTime = 3 + random()%5;
-			
-			debugHunter("Wychodze ze stanu INSHOP");
+			debugHunter("Wychodze ze stanu SHOP");
 			changeState(InTask);
 			
 		}
 		else if(stan==InTask){
-			debugHunter("Jestem w stanie INTASK");
+			debugHunter("Jestem w stanie TASK");
 			srandom(rank);
 			packet_t message;
 			for(int i = 0; i < hunterTeamsNum; i++){
@@ -111,7 +76,7 @@ void mainLoopHunter(){
 			ackNumShop = 0;
 			int sleepTime = 5 + random()%5;
 
-			debugHunter("Wychodze ze stanu INTASK");
+			debugHunter("Wychodze ze stanu TASK");
 			packet_t message2;
 			int ids[2];
 			getTask(&taskQueue, ids);
@@ -140,12 +105,12 @@ void mainLoopHunter(){
 				}
 				ackNumShop = 0;
 				
-				debugHunter("Wychodze do WAIT");
+				debugHunter("Wchodze do WAIT");
 				changeState(InWait);
 			}
 			else{
 				
-				debugHunter("Wychodze do INSEARCH");
+				debugHunter("Wychodze do SEARCH");
 				changeState(InSearch);	
 				sendOldRequests(&requestPriorityTask, &ackStateTask);
 			}

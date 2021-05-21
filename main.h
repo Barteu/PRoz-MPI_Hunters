@@ -34,6 +34,9 @@ extern pthread_mutex_t taskQueueMut;
 extern pthread_mutex_t ackStateTaskMut;
 extern pthread_mutex_t requestPriorityTaskMut;
 
+extern pthread_mutex_t sleepMut;	
+extern pthread_cond_t cond; 
+
 
 
 /* stany procesu */
