@@ -1,5 +1,6 @@
 #include "main.h"
 #include "watek_komunikacyjny.h"
+#include "obsluga_struktur.h"
 
 
 void* startKomWatekGiver(void* ptr){
@@ -8,7 +9,6 @@ void* startKomWatekGiver(void* ptr){
     packet_t pakiet;
 	/* Obrazuje pętlę odbierającą pakiety o różnych typach */
     while ( stan!=InFinish ) {
-		debugGiver("Czekam na recv");
         MPI_Recv( &pakiet, 1, MPI_PAKIET_T, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		// Aktualizujemy zegar Lamporta procesu Zleceniodawcy
 		setMaxLamport(pakiet.ts);
@@ -29,12 +29,18 @@ void* startKomWatekHunter(void* ptr){
 	MPI_Status status;
     int is_message = FALSE;
     packet_t pakiet;
+	int time2;
 	/* Obrazuje pętlę odbierającą pakiety o różnych typach */
     while ( stan!=InFinish ) {
-		debugHunter("Czekam na recv");
         MPI_Recv( &pakiet, 1, MPI_PAKIET_T, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		// Aktualizujemy zegar Lamporta procesu Lowcy
-		setMaxLamport(pakiet.ts);
+		if(status.MPI_TAG==SHOP_ACK || status.MPI_TAG==SHOP_REQ)
+		{
+			time2 = setMaxLamport2(pakiet.ts);
+		}
+		else{
+			setMaxLamport(pakiet.ts);
+		}
 		
 
 		if(stan==InSearch){
@@ -75,7 +81,14 @@ void* startKomWatekHunter(void* ptr){
 							addTask(&taskQueue, pakiet.data, pakiet.data2);
 							forwardAllAck(&requestPriorityTask, &ackStateTask,pakiet.data, pakiet.data2);
 							changeState(InWait);
-							
+							waitQueueShop[rank] = time2;
+							pakiet.priority = waitQueueShop[rank];
+							for(int i = 0; i < hunterTeamsNum; i++){
+								if(i != rank){
+									sendPacket2(&pakiet, i, SHOP_REQ);
+								}
+							}
+							ackNumShop = 0;
 						}
 					}
 				}
@@ -93,12 +106,27 @@ void* startKomWatekHunter(void* ptr){
 					addTask(&taskQueue, pakiet.data, pakiet.data2);
 					forwardAllAck(&requestPriorityTask, &ackStateTask,pakiet.data, pakiet.data2);
 					changeState(InWait);
-				}
+					waitQueueShop[rank] = time2;
+					pakiet.priority = waitQueueShop[rank];
+					for(int i = 0; i < hunterTeamsNum; i++){
+						if(i != rank){
+							sendPacket2(&pakiet, i, SHOP_REQ);
+						}
+					}
+					ackNumShop = 0;
+			}
 				break;
 			case FIN:
 				debugHunter("Dostałem wiadomość od %d o zakonczeniu zlecenia o id %d, ID zleceniodawcy %d typu FIN", pakiet.src, pakiet.data, pakiet.data2);
 				deleteAckState(&ackStateTask, pakiet.data, pakiet.data2);
 				deleteRequestPriority(&requestPriorityTask, pakiet.data, pakiet.data2);
+				break;
+			case SHOP_ACK:
+				// Ignorujemy wiadomosc
+				break;
+			case SHOP_REQ:
+				pakiet.priority = waitQueueShop[rank];
+				sendPacket2(&pakiet, pakiet.src, SHOP_ACK);
 				break;
 			}
 
@@ -143,6 +171,25 @@ void* startKomWatekHunter(void* ptr){
 				deleteAckState(&ackStateTask, pakiet.data, pakiet.data2);
 				deleteRequestPriority(&requestPriorityTask, pakiet.data, pakiet.data2);
 				break;
+			case SHOP_ACK:
+				ackNumShop += 1;
+				if(ackNumShop == (hunterTeamsNum - 1) - (shopSize - 1)){
+					changeState(InShop);
+				}
+				break;
+			case SHOP_REQ:
+				if(waitQueueShop[rank] == -1){
+					sendPacket2(&pakiet, pakiet.src, SHOP_ACK);
+				}
+				else if(waitQueueShop[rank] < pakiet.priority || (waitQueueShop[rank] == pakiet.priority && rank < pakiet.src)){
+					waitQueueShop[pakiet.src] = pakiet.priority;
+					ackNumShop += 1; 
+					if(ackNumShop == (hunterTeamsNum - 1) - (shopSize - 1)){
+						changeState(InShop);
+					}
+				}
+				
+				break;
 			}
 		}
 		else if(stan==InShop){
@@ -185,6 +232,12 @@ void* startKomWatekHunter(void* ptr){
 				deleteAckState(&ackStateTask, pakiet.data, pakiet.data2);
 				deleteRequestPriority(&requestPriorityTask, pakiet.data, pakiet.data2);
 				break;
+			case SHOP_ACK:
+				// Ignorujemy wiadomosc
+				break;
+			case SHOP_REQ:
+				waitQueueShop[pakiet.src] = pakiet.priority;
+				break;
 			}
 		}
 		else if(stan==InTask){
@@ -226,6 +279,12 @@ void* startKomWatekHunter(void* ptr){
 				debugHunter("Dostałem wiadomość od %d o zakonczeniu zlecenia o id %d, ID zleceniodawcy %d typu FIN", pakiet.src, pakiet.data, pakiet.data2);
 				deleteAckState(&ackStateTask, pakiet.data, pakiet.data2);
 				deleteRequestPriority(&requestPriorityTask, pakiet.data, pakiet.data2);
+				break;
+			case SHOP_ACK:
+				// Ignorujemy wiadomosc
+				break;
+			case SHOP_REQ:
+				sendPacket2(&pakiet, pakiet.src, SHOP_ACK);
 				break;
 			}
 		}

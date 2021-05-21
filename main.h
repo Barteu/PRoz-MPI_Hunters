@@ -27,6 +27,8 @@ extern int lowerLimit;
 extern int hunterTeamsNum;
 
 extern pthread_mutex_t activeTasksMut;
+extern pthread_mutex_t lampMut;
+extern pthread_mutex_t lampMut2;
 
 extern pthread_mutex_t taskQueueMut;
 extern pthread_mutex_t ackStateTaskMut;
@@ -116,29 +118,9 @@ extern struct TaskQueue taskQueue;
 extern struct AckStateTask ackStateTask;
 extern struct RequestPriorityTask requestPriorityTask;
 
-void addRequestPriority(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId);
-//struct RequestPriorityNode getRequestPriority(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId);
-int getRequestPriorityByHunter(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId, int hunterId);
-void setRequestPriorityByHunter(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId, int hunterId, int priority);
 
-int deleteRequestPriority(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId);
-void addAckState(struct AckStateTask *ackStateTask, int taskId, int giverId);
-
-//struct AckStateNode* getAckState(struct AckStateTask *ackStateTask, int taskId, int giverId);
-taskStateNames getAckStateByHunter(struct AckStateTask *ackStateTask, int taskId, int giverId, int hunterId);
-int getAckStateTask(struct AckStateTask *ackStateTask, int taskId, int giverId);
-void setAckStateByHunter(struct AckStateTask *ackStateTask, int taskId, int giverId, int hunterId, taskStateNames state);
-int deleteAckState(struct AckStateTask *ackStateTask, int taskId, int giverId);
-
-void addTask(struct TaskQueue *taskQueue, int taskId, int giverId);
-int isTaskInQueue(struct TaskQueue *taskQueue, int taskId, int giverId);
-void getTask(struct TaskQueue *taskQueue, int* ids);
-int isTaskRequested(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId);
-
-
-
-void forwardAllAck(struct RequestPriorityTask* requestPriorityTask, struct AckStateTask *ackStateTask, int taskId, int giverId);
-void forwardAck(struct RequestPriorityTask* requestPriorityTask, struct AckStateTask *ackStateTask, int taskId, int giverId, taskStateNames ackState);
+extern int* waitQueueShop;
+extern int ackNumShop;
 
 /* macro debug - działa jak printf, kiedy zdefiniowano
    DEBUG, kiedy DEBUG niezdefiniowane działa jak instrukcja pusta 
@@ -164,13 +146,15 @@ int setMaxLamport(int);
 
 int incLamport2();
 int setMaxLamport2(int);
+const char * getStateName();
+
 
 extern int zegar;
 extern int zegar2;
 #ifdef DEBUG
 #define debug(FORMAT,...) printf("%c[%d;%dm [tid %d ts %d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank,zegar, ##__VA_ARGS__, 27,0,37);
-#define debugGiver(FORMAT,...) printf("%c[%d;%dm [GIVER][tid %d ts %d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank,zegar, ##__VA_ARGS__, 27,0,37);
-#define debugHunter(FORMAT,...) printf("%c[%d;%dm [HUNTER][tid %d ts %d ts2 %d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank,zegar,zegar2, ##__VA_ARGS__, 27,0,37);
+#define debugGiver(FORMAT,...) printf("%c[%d;%dm [GIVER][%s][tid:%d, ts:%d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, getStateName(),rank,zegar, ##__VA_ARGS__, 27,0,37);
+#define debugHunter(FORMAT,...) printf("%c[%d;%dm [HUNTER][%s][tid:%d, ts:%d, ts2:%d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, getStateName(),rank,zegar,zegar2, ##__VA_ARGS__, 27,0,37);
 #else
 #define debug(...) ;
 #define debugGiver(...) ;
