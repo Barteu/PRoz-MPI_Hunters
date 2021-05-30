@@ -51,6 +51,13 @@ extern taskStateNames taskState;
 /* Ile mamy aktywnych zlecen */
 extern int activeTasks;
 
+
+
+extern int tasksDoneHunter;
+extern int tasksDoneGiver;
+
+
+
 /* Sklep */
 extern int shopSize;
 

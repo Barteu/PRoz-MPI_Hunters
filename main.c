@@ -23,6 +23,8 @@ struct TaskQueue taskQueue;
 struct AckStateTask ackStateTask;
 struct RequestPriorityTask requestPriorityTask;
 
+int tasksDoneHunter;
+int tasksDoneGiver;
 
 
 // taskGiver
@@ -118,6 +120,7 @@ void inicjuj(int *argc, char ***argv)
         for(int i=0; i<size;i++){
             waitQueueShop[i] = -1;
         }
+        tasksDoneHunter = 0;
         pthread_create( &threadKom, NULL, startKomWatekHunter , 0);
     } 
     else
@@ -126,6 +129,7 @@ void inicjuj(int *argc, char ***argv)
         lowerLimit = atoi((*argv)[2]);
         upperLimit = atoi((*argv)[3]);
         activeTasks = 0;
+        tasksDoneGiver= 0;
         pthread_create( &threadKom, NULL, startKomWatekGiver , 0);
     }
    

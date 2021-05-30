@@ -9,7 +9,7 @@ void mainLoopGiver()
     srandom(rank);
 	taskId = 0;
     while (stan != InFinish) {
-        int sleepTime = 1 + random()%5; 
+        int sleepTime = 4 + random()%5; 
         if (stan==InActive) {
 			debugGiver("Jestem w stanie Active");
 			// Wysylam BROADCAST
@@ -52,13 +52,16 @@ void mainLoopHunter(){
 		else if(stan==InWait){
 			debugHunter("Jestem w stanie WAIT");
 			pthread_mutex_lock(&sleepMut);
+			debugHunter("1Zasypiam w WAIT");
 			pthread_cond_wait(&cond, &sleepMut);
 			pthread_mutex_unlock(&sleepMut);
+			debugHunter("Wychodze ze stanu WAIT");
 		}
 		else if(stan==InShop){
 			debugHunter("Jestem w stanie SHOP");
 			srandom(rank);
         	int sleepTime = 3 + random()%5;
+			sleep(sleepTime);
 			debugHunter("Wychodze ze stanu SHOP");
 			changeState(InTask);
 			
@@ -75,8 +78,12 @@ void mainLoopHunter(){
 			}
 			ackNumShop = 0;
 			int sleepTime = 5 + random()%5;
+			sleep(sleepTime);
 
-			debugHunter("Wychodze ze stanu TASK");
+			tasksDoneHunter ++;
+			debugHunter("Wychodze ze stanu TASK, zrealizowalem %d zadan",tasksDoneHunter);
+			
+
 			packet_t message2;
 			int ids[2];
 			getTask(&taskQueue, ids);

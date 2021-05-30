@@ -17,10 +17,12 @@ void* startKomWatekGiver(void* ptr){
 			changeState(InFinish);
 			break;
 		case FIN:
-			debugGiver("Dostałem FIN od (tid:%d)", pakiet.src);
+			tasksDoneGiver++;
+			debugGiver("Dostałem FIN od (tid:%d), zrealizowano %d moich zadań", pakiet.src,tasksDoneGiver);
 			changeActiveTasks(-1);
-			if(activeTasks < lowerLimit){
-				changeState(InActive);
+			if(activeTasks < lowerLimit && stan==InOverload){
+				changeState(InActive);	
+				pthread_cond_signal(&cond);
 			}
 			break;
 		}
@@ -177,7 +179,7 @@ void* startKomWatekHunter(void* ptr){
 				ackNumShop += 1;
 				if(ackNumShop == (hunterTeamsNum - 1) - (shopSize - 1)){
 					changeState(InShop);
-					pthread_cond_signal(&cond);
+					pthread_cond_broadcast(&cond);
 				}
 				break;
 			case SHOP_REQ:
@@ -189,7 +191,7 @@ void* startKomWatekHunter(void* ptr){
 					ackNumShop += 1; 
 					if(ackNumShop == (hunterTeamsNum - 1) - (shopSize - 1)){
 						changeState(InShop);
-						pthread_cond_signal(&cond);
+						pthread_cond_broadcast(&cond);
 					}
 				}
 				
