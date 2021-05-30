@@ -18,11 +18,12 @@ void* startKomWatekGiver(void* ptr){
 			break;
 		case FIN:
 			tasksDoneGiver++;
-			debugGiver("Dostałem FIN od (tid:%d), zrealizowano %d moich zadań", pakiet.src,tasksDoneGiver);
+			printlnGiver("Dostałem FIN od (tid:%d), zrealizowano %d moich zadań", pakiet.src,tasksDoneGiver);
 			changeActiveTasks(-1);
 			if(activeTasks < lowerLimit && stan==InOverload){
 				changeState(InActive);	
-				pthread_cond_signal(&cond);
+				//pthread_cond_signal(&cond);
+				pthread_mutex_unlock(&sleepMut);
 			}
 			break;
 		}
@@ -83,7 +84,8 @@ void* startKomWatekHunter(void* ptr){
 							addTask(&taskQueue, pakiet.data, pakiet.data2);
 							forwardAllAck(&requestPriorityTask, &ackStateTask,pakiet.data, pakiet.data2);
 							changeState(InWait);
-							pthread_cond_signal(&cond);
+							//pthread_cond_signal(&cond);
+							pthread_mutex_unlock(&sleepMut);
 							waitQueueShop[rank] = time2;
 							pakiet.priority = waitQueueShop[rank];
 							for(int i = 0; i < hunterTeamsNum; i++){
@@ -109,7 +111,8 @@ void* startKomWatekHunter(void* ptr){
 					addTask(&taskQueue, pakiet.data, pakiet.data2);
 					forwardAllAck(&requestPriorityTask, &ackStateTask,pakiet.data, pakiet.data2);
 					changeState(InWait);
-					pthread_cond_signal(&cond);
+					//pthread_cond_signal(&cond);
+					pthread_mutex_unlock(&sleepMut);
 					waitQueueShop[rank] = time2;
 					pakiet.priority = waitQueueShop[rank];
 					for(int i = 0; i < hunterTeamsNum; i++){
@@ -127,9 +130,11 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			case SHOP_ACK:
 				// Ignorujemy wiadomosc
+				debugHunter("Dostalem SHOP_ACK od (tid:%d), ignoruje go", pakiet.src);
 				break;
 			case SHOP_REQ:
-				pakiet.priority = waitQueueShop[rank];
+				//pakiet.priority = waitQueueShop[rank];   gdybysmy chcieli zawrzec w SHOP_ACK nasz priorytet
+				debugHunter("Dostalem SHOP_REQ {priority: %d} od (tid:%d), odsylam SHOP_ACK", pakiet.priority, pakiet.src);
 				sendPacket2(&pakiet, pakiet.src, SHOP_ACK);
 				break;
 			}
@@ -148,6 +153,7 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			
 			case TASK_REQ:
+				debugHunter("Dostałem TASK_REQ: {taskId: %d, giverId: %d, priority: %d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.priority, pakiet.src);
 				if(!isTaskInQueue(&taskQueue,pakiet.data, pakiet.data2))
 				{
 					sendPacket(&pakiet, pakiet.src, TASK_ACK);
@@ -176,22 +182,27 @@ void* startKomWatekHunter(void* ptr){
 				deleteRequestPriority(&requestPriorityTask, pakiet.data, pakiet.data2);
 				break;
 			case SHOP_ACK:
+				debugHunter("Dostalem SHOP_ACK od (tid:%d)", pakiet.src);
 				ackNumShop += 1;
 				if(ackNumShop == (hunterTeamsNum - 1) - (shopSize - 1)){
 					changeState(InShop);
-					pthread_cond_broadcast(&cond);
+					//pthread_cond_broadcast(&cond2);
+					pthread_mutex_unlock(&sleepMut2);
 				}
 				break;
 			case SHOP_REQ:
+				debugHunter("Dostalem SHOP_REQ {priority: %d} od (tid:%d), odsylam SHOP_ACK", pakiet.priority, pakiet.src);
 				if(waitQueueShop[rank] == -1){
 					sendPacket2(&pakiet, pakiet.src, SHOP_ACK);
 				}
 				else if(waitQueueShop[rank] < pakiet.priority || (waitQueueShop[rank] == pakiet.priority && rank < pakiet.src)){
 					waitQueueShop[pakiet.src] = pakiet.priority;
 					ackNumShop += 1; 
+					debugHunter("SHOP_REQ {priority: %d} traktuje jako SHOP_ACK (tid:%d)", pakiet.priority, pakiet.src);
 					if(ackNumShop == (hunterTeamsNum - 1) - (shopSize - 1)){
 						changeState(InShop);
-						pthread_cond_broadcast(&cond);
+						//pthread_cond_broadcast(&cond2);
+						pthread_mutex_unlock(&sleepMut2);
 					}
 				}
 				
@@ -213,6 +224,7 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			
 			case TASK_REQ:
+			    debugHunter("Dostałem TASK_REQ: {taskId: %d, giverId: %d, priority: %d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.priority, pakiet.src);
 				if(!isTaskInQueue(&taskQueue,pakiet.data, pakiet.data2))
 				{
 					sendPacket(&pakiet, pakiet.src, TASK_ACK);
@@ -242,8 +254,10 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			case SHOP_ACK:
 				// Ignorujemy wiadomosc
+				debugHunter("Dostalem SHOP_ACK od (tid:%d), ignoruje go", pakiet.src);
 				break;
 			case SHOP_REQ:
+				debugHunter("Dostalem SHOP_REQ {priority: %d} od (tid:%d), zapisuje je sobie", pakiet.priority, pakiet.src);
 				waitQueueShop[pakiet.src] = pakiet.priority;
 				break;
 			}
@@ -261,6 +275,7 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			
 			case TASK_REQ:
+			    debugHunter("Dostałem TASK_REQ: {taskId: %d, giverId: %d, priority: %d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.priority, pakiet.src);
 				if(!isTaskInQueue(&taskQueue,pakiet.data, pakiet.data2))
 				{
 					sendPacket(&pakiet, pakiet.src, TASK_ACK);
@@ -290,8 +305,10 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			case SHOP_ACK:
 				// Ignorujemy wiadomosc
+				debugHunter("Dostalem SHOP_ACK od (tid:%d), ignoruje go", pakiet.src);
 				break;
 			case SHOP_REQ:
+				debugHunter("Dostalem SHOP_REQ {priority: %d} od (tid:%d), odsylam SHOP_ACK", pakiet.priority, pakiet.src);
 				sendPacket2(&pakiet, pakiet.src, SHOP_ACK);
 				break;
 			}

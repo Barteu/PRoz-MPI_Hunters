@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
-/* odkomentować, jeżeli się chce DEBUGI */
+/* odkomentować, jeżeli się chce DEBUGI  ( albo umiescic -DDEBUG w makefile )*/
 //#define DEBUG 
 /* boolean */
 #define TRUE 1
@@ -34,8 +34,10 @@ extern pthread_mutex_t taskQueueMut;
 extern pthread_mutex_t ackStateTaskMut;
 extern pthread_mutex_t requestPriorityTaskMut;
 
-extern pthread_mutex_t sleepMut;	
+extern pthread_mutex_t sleepMut;
+extern pthread_mutex_t sleepMut2;	
 extern pthread_cond_t cond; 
+extern pthread_cond_t cond2;
 
 
 
@@ -163,8 +165,8 @@ extern int zegar;
 extern int zegar2;
 #ifdef DEBUG
 #define debug(FORMAT,...) printf("%c[%d;%dm [tid %d ts %d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank,zegar, ##__VA_ARGS__, 27,0,37);
-#define debugGiver(FORMAT,...) printf("%c[%d;%dm [GIVER][%s][tid:%d, ts:%d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, getStateName(),rank,zegar, ##__VA_ARGS__, 27,0,37);
-#define debugHunter(FORMAT,...) printf("%c[%d;%dm [HUNTER][%s][tid:%d, ts:%d, ts2:%d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, getStateName(),rank,zegar,zegar2, ##__VA_ARGS__, 27,0,37);
+#define debugGiver(FORMAT,...) printf("%c[%d;%dm [Giver][%s][tid:%d, ts:%d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, getStateName(),rank,zegar, ##__VA_ARGS__, 27,0,37);
+#define debugHunter(FORMAT,...) printf("%c[%d;%dm [Hunter][%s][tid:%d, ts:%d, ts2:%d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, getStateName(),rank,zegar,zegar2, ##__VA_ARGS__, 27,0,37);
 #else
 #define debug(...) ;
 #define debugGiver(...) ;
@@ -182,8 +184,9 @@ extern int zegar2;
 #define P_CLR printf("%c[%d;%dm",27,0,37);
 
 /* printf ale z kolorkami i automatycznym wyświetlaniem RANK. Patrz debug wyżej po szczegóły, jak działa ustawianie kolorków */
-#define println(FORMAT, ...) printf("%c[%d;%dm [tid %d ts %d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank,zegar, ##__VA_ARGS__, 27,0,37);
-
+#define println(FORMAT,...) printf("%c[%d;%dm [tid %d ts %d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank,zegar, ##__VA_ARGS__, 27,0,37);
+#define printlnGiver(FORMAT,...) printf("%c[%d;%dm [Giver][%s][tid:%d, ts:%d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, getStateName(),rank,zegar, ##__VA_ARGS__, 27,0,37);
+#define printlnHunter(FORMAT,...) printf("%c[%d;%dm [Hunter][%s][tid:%d, ts:%d, ts2:%d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, getStateName(),rank,zegar,zegar2, ##__VA_ARGS__, 27,0,37);
 /* wysyłanie pakietu, skrót: wskaźnik do pakietu (0 oznacza stwórz pusty pakiet), do kogo, z jakim typem */
 void sendPacket(packet_t *pkt, int destination, int tag);
 

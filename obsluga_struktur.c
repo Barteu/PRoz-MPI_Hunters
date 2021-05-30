@@ -169,28 +169,6 @@ void forwardAck(struct RequestPriorityTask* requestPriorityTask, struct AckState
 }
 
 
-// struct AckStateNode getAckState(struct AckStateTask *ackStateTask, int taskId, int giverId){
-//     pthread_mutex_lock(&ackStateTaskMut);
-//     struct AckStateNode* node;
-//     node = ackStateTask->head;
-//     while(node){
-//         if(node->taskId == taskId && node->giverId == giverId){
-//             struct AckStateNode tmp;
-//             tmp.taskId = node->taskId;
-//             tmp.giverId = node->giverId;
-//             tmp.states = (taskStateNames)malloc(sizeof(taskStateNames) * hunterTeamsNum);
-//             for(int i = 0; i < hunterTeamsNum; i++){
-//                 tmp.states[i] = node->states[i];
-//             }
-//             pthread_mutex_unlock(&ackStateTaskMut);
-//             return tmp;
-//         }
-//         node = node->next;
-//     }
-//     pthread_mutex_unlock(&ackStateTaskMut);
-//     return;
-// }
-
 taskStateNames getAckStateByHunter(struct AckStateTask *ackStateTask, int taskId, int giverId, int hunterId){
     pthread_mutex_lock(&ackStateTaskMut);
     struct AckStateNode* node;
@@ -307,20 +285,6 @@ void addRequestPriority(struct RequestPriorityTask *requestPriorityTask, int tas
     pthread_mutex_unlock(&requestPriorityTaskMut);
     pthread_mutex_unlock(&lampMut);
 }
-
-// struct RequestPriorityNode* getRequestPriority(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId){
-//     pthread_mutex_lock(&requestPriorityTaskMut);
-//     struct RequestPriorityNode* node;
-//     node = requestPriorityTask->head;
-//     while(node){
-//         if(node->taskId == taskId && node->giverId == giverId){
-//             return node;
-//         }
-//         node = node->next;
-//     }
-//     pthread_mutex_unlock(&requestPriorityTaskMut);
-//     return;
-// }
 
 
  int getRequestPriorityByHunter(struct RequestPriorityTask *requestPriorityTask, int taskId, int giverId, int hunterId){

@@ -47,8 +47,11 @@ pthread_mutex_t taskQueueMut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t ackStateTaskMut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t requestPriorityTaskMut = PTHREAD_MUTEX_INITIALIZER;
 
-pthread_mutex_t sleepMut = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t sleepMut;// = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_mutex_t sleepMut2;// = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t cond2 = PTHREAD_COND_INITIALIZER;
 
 
 
@@ -107,6 +110,12 @@ void inicjuj(int *argc, char ***argv)
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     srand(rank);
 
+    pthread_mutex_init(&sleepMut, NULL);
+    pthread_mutex_init(&sleepMut2, NULL);
+
+    pthread_mutex_lock(&sleepMut);
+    pthread_mutex_lock(&sleepMut2);
+
     shopSize = atoi((*argv)[4]);
     if(rank< atoi((*argv)[1])){
         taskQueue.head = NULL;
@@ -122,6 +131,7 @@ void inicjuj(int *argc, char ***argv)
         }
         tasksDoneHunter = 0;
         pthread_create( &threadKom, NULL, startKomWatekHunter , 0);
+        
     } 
     else
     {
@@ -241,6 +251,7 @@ void changeActiveTasks( int newActiveTasks )
         return;
     }
     activeTasks += newActiveTasks;
+    debugHunter("Liczba moich aktualnie niewykonanych zadan: %d (LM: %d HM: %d)",ackStateTask,lowerLimit,upperLimit);
     pthread_mutex_unlock( &activeTasksMut );
 }
 

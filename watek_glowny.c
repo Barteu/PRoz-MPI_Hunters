@@ -6,12 +6,12 @@
 // Main loop dla procesu Zleceniodawcy
 void mainLoopGiver()
 {
-    srandom(rank);
+    srandom(time(NULL));
 	taskId = 0;
     while (stan != InFinish) {
         int sleepTime = 4 + random()%5; 
         if (stan==InActive) {
-			debugGiver("Jestem w stanie Active");
+			printlnGiver("Jestem w stanie Active");
 			// Wysylam BROADCAST
 			packet_t message;
 			message.data = taskId; // ID zlecenia
@@ -19,7 +19,7 @@ void mainLoopGiver()
 			for(int i = 0; i < hunterTeamsNum; i++){
 				sendPacket(&message, i, BROADCAST);
 			}
-			debugGiver("BROADCAST {taskId:%d, giverId:%d} wyslany" , taskId,rank);
+			printlnGiver("BROADCAST {taskId:%d, giverId:%d} wyslany" , taskId,rank);
 			taskId++;
 			changeActiveTasks(1);
 			
@@ -31,10 +31,10 @@ void mainLoopGiver()
 			}
 		}
 		else if(stan==InOverload){
-			debugGiver("Jestem w stanie Overload");
+			printlnGiver("Jestem w stanie Overload");
 			pthread_mutex_lock(&sleepMut);
-			pthread_cond_wait(&cond, &sleepMut);
-			pthread_mutex_unlock(&sleepMut);
+			// pthread_cond_wait(&cond, &sleepMut);
+			// pthread_mutex_unlock(&sleepMut);
 		}
 	
     }
@@ -44,31 +44,29 @@ void mainLoopHunter(){
 	while(stan!=InFinish){
 		// cos tam robi
 		if(stan==InSearch){
-			debugHunter("Jestem w stanie SEARCH");
+			printlnHunter("Jestem w stanie SEARCH");
 			pthread_mutex_lock(&sleepMut);
-			pthread_cond_wait(&cond, &sleepMut);
-			pthread_mutex_unlock(&sleepMut);
+			// pthread_cond_wait(&cond, &sleepMut);
+			// pthread_mutex_unlock(&sleepMut);
 		}
 		else if(stan==InWait){
-			debugHunter("Jestem w stanie WAIT");
-			pthread_mutex_lock(&sleepMut);
-			debugHunter("1Zasypiam w WAIT");
-			pthread_cond_wait(&cond, &sleepMut);
-			pthread_mutex_unlock(&sleepMut);
+			printlnHunter("Ubiegam sie o sekcje krytyczna, jestem w stanie WAIT");
+			pthread_mutex_lock(&sleepMut2);
+			// pthread_mutex_unlock(&sleepMut2);
 			debugHunter("Wychodze ze stanu WAIT");
 		}
 		else if(stan==InShop){
-			debugHunter("Jestem w stanie SHOP");
-			srandom(rank);
+			printlnHunter("Jestem w stanie SHOP");
+			srandom(time(NULL));
         	int sleepTime = 3 + random()%5;
 			sleep(sleepTime);
-			debugHunter("Wychodze ze stanu SHOP");
+			printlnHunter("Wychodze ze stanu SHOP");
 			changeState(InTask);
 			
 		}
 		else if(stan==InTask){
-			debugHunter("Jestem w stanie TASK");
-			srandom(rank);
+			printlnHunter("Jestem w stanie TASK");
+			srandom(time(NULL));
 			packet_t message;
 			for(int i = 0; i < hunterTeamsNum; i++){
 				if(i != rank && waitQueueShop[i]!=-1){
@@ -81,7 +79,7 @@ void mainLoopHunter(){
 			sleep(sleepTime);
 
 			tasksDoneHunter ++;
-			debugHunter("Wychodze ze stanu TASK, zrealizowalem %d zadan",tasksDoneHunter);
+			printlnHunter("Wychodze ze stanu TASK, zrealizowalem %d zadania",tasksDoneHunter);
 			
 
 			packet_t message2;
