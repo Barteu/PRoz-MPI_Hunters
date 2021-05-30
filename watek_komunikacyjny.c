@@ -175,7 +175,7 @@ void* startKomWatekHunter(void* ptr){
 					}
 					
 				}
-				debugHunter("Wywala task ACK?");
+			
 				break;
 			
 			case FIN:
@@ -190,11 +190,8 @@ void* startKomWatekHunter(void* ptr){
 				if(ackNumShop == (hunterTeamsNum - 1) - (shopSize - 1)){
 					changeState(InShop);
 					
-						//debugHunter("Zaraz zdejme mutexa ");
-					//pthread_mutex_unlock(&sleepMut2);
-						//debugHunter("Zdjalem mutexa ");
 				}
-					debugHunter("Wywala shop ACK?");
+				
 				break;
 			case SHOP_REQ:
 				debugHunter("Dostalem SHOP_REQ {priority: %d} od (tid:%d), odsylam SHOP_ACK", pakiet.priority, pakiet.src);
