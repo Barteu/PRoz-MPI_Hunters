@@ -126,6 +126,7 @@ void inicjuj(int *argc, char ***argv)
         requestPriorityTask.tail = NULL;
         stan = InSearch;
         waitQueueShop = (int*)malloc(sizeof(int)*size);
+        ackNumShop = 0;
         for(int i=0; i<size;i++){
             waitQueueShop[i] = -1;
         }

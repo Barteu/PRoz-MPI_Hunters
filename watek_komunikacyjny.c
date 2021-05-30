@@ -83,6 +83,7 @@ void* startKomWatekHunter(void* ptr){
 							debugHunter("Zlecenie przyjete: {taskId:%d, giverId:%d}", pakiet.data, pakiet.data2);
 							addTask(&taskQueue, pakiet.data, pakiet.data2);
 							forwardAllAck(&requestPriorityTask, &ackStateTask,pakiet.data, pakiet.data2);
+							ackNumShop = 0;
 							changeState(InWait);
 							//pthread_cond_signal(&cond);
 							pthread_mutex_unlock(&sleepMut);
@@ -93,7 +94,7 @@ void* startKomWatekHunter(void* ptr){
 									sendPacket2(&pakiet, i, SHOP_REQ);
 								}
 							}
-							ackNumShop = 0;
+							
 						}
 					}
 				}
@@ -110,6 +111,7 @@ void* startKomWatekHunter(void* ptr){
 				if(getAckStateTask(&ackStateTask,pakiet.data,pakiet.data2)){
 					addTask(&taskQueue, pakiet.data, pakiet.data2);
 					forwardAllAck(&requestPriorityTask, &ackStateTask,pakiet.data, pakiet.data2);
+					ackNumShop = 0;
 					changeState(InWait);
 					//pthread_cond_signal(&cond);
 					pthread_mutex_unlock(&sleepMut);
@@ -120,7 +122,6 @@ void* startKomWatekHunter(void* ptr){
 							sendPacket2(&pakiet, i, SHOP_REQ);
 						}
 					}
-					ackNumShop = 0;
 			}
 				break;
 			case FIN:
@@ -174,6 +175,7 @@ void* startKomWatekHunter(void* ptr){
 					}
 					
 				}
+				debugHunter("Wywala task ACK?");
 				break;
 			
 			case FIN:
@@ -189,6 +191,7 @@ void* startKomWatekHunter(void* ptr){
 					//pthread_cond_broadcast(&cond2);
 					pthread_mutex_unlock(&sleepMut2);
 				}
+					debugHunter("Wywala shop ACK?");
 				break;
 			case SHOP_REQ:
 				debugHunter("Dostalem SHOP_REQ {priority: %d} od (tid:%d), odsylam SHOP_ACK", pakiet.priority, pakiet.src);
@@ -216,11 +219,11 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			case BROADCAST:
 				debugHunter("Dostałem BROADCAST {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data,pakiet.src,pakiet.src);
-					//debugHunter("SHOP 1Koniec przetwarzania BROADCAST");
+					
 				addAckState(&ackStateTask, pakiet.data, pakiet.src);
-					//debugHunter("SHOP 2Koniec przetwarzania BROADCAST");
+				
 				addRequestPriority(&requestPriorityTask, pakiet.data,pakiet.src);
-					//debugHunter("SHOP 3Koniec przetwarzania BROADCAST");
+				
 				break;
 			
 			case TASK_REQ:

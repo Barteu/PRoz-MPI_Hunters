@@ -3,6 +3,7 @@
 #include "obsluga_struktur.h"
 
 
+
 // Main loop dla procesu Zleceniodawcy
 void mainLoopGiver()
 {
@@ -41,6 +42,7 @@ void mainLoopGiver()
 }
 
 void mainLoopHunter(){
+	srandom(time(NULL));
 	while(stan!=InFinish){
 		// cos tam robi
 		if(stan==InSearch){
@@ -57,7 +59,6 @@ void mainLoopHunter(){
 		}
 		else if(stan==InShop){
 			printlnHunter("Jestem w stanie SHOP");
-			srandom(time(NULL));
         	int sleepTime = 3 + random()%5;
 			sleep(sleepTime);
 			printlnHunter("Wychodze ze stanu SHOP");
@@ -66,7 +67,6 @@ void mainLoopHunter(){
 		}
 		else if(stan==InTask){
 			printlnHunter("Jestem w stanie TASK");
-			srandom(time(NULL));
 			packet_t message;
 			for(int i = 0; i < hunterTeamsNum; i++){
 				if(i != rank && waitQueueShop[i]!=-1){
