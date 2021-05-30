@@ -33,7 +33,10 @@ void mainLoopGiver()
 		}
 		else if(stan==InOverload){
 			printlnGiver("Jestem w stanie Overload");
-			pthread_mutex_lock(&sleepMut);
+			while(stan==InOverload){
+				sleep(1);
+			}
+			//pthread_mutex_lock(&sleepMut);
 			// pthread_cond_wait(&cond, &sleepMut);
 			// pthread_mutex_unlock(&sleepMut);
 		}
@@ -47,13 +50,19 @@ void mainLoopHunter(){
 		// cos tam robi
 		if(stan==InSearch){
 			printlnHunter("Jestem w stanie SEARCH");
-			pthread_mutex_lock(&sleepMut);
+			while(stan==InSearch){
+				sleep(1);
+			}
+			//pthread_mutex_lock(&sleepMut);
 			// pthread_cond_wait(&cond, &sleepMut);
 			// pthread_mutex_unlock(&sleepMut);
 		}
 		else if(stan==InWait){
 			printlnHunter("Ubiegam sie o sekcję krytyczną sklepu, jestem w stanie WAIT");
-			pthread_mutex_lock(&sleepMut2);
+			//pthread_mutex_lock(&sleepMut2);
+			while(stan==InWait){
+				sleep(1);
+			}
 			// pthread_mutex_unlock(&sleepMut2);
 			debugHunter("Wychodze ze stanu WAIT");
 		}

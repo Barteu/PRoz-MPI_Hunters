@@ -23,7 +23,7 @@ void* startKomWatekGiver(void* ptr){
 			if(activeTasks < lowerLimit && stan==InOverload){
 				changeState(InActive);	
 				//pthread_cond_signal(&cond);
-				pthread_mutex_unlock(&sleepMut);
+				//pthread_mutex_unlock(&sleepMut);
 			}
 			break;
 		}
@@ -86,7 +86,7 @@ void* startKomWatekHunter(void* ptr){
 							ackNumShop = 0;
 							changeState(InWait);
 							//pthread_cond_signal(&cond);
-							pthread_mutex_unlock(&sleepMut);
+							//pthread_mutex_unlock(&sleepMut);
 							waitQueueShop[rank] = time2;
 							pakiet.priority = waitQueueShop[rank];
 							for(int i = 0; i < hunterTeamsNum; i++){
@@ -114,7 +114,7 @@ void* startKomWatekHunter(void* ptr){
 					ackNumShop = 0;
 					changeState(InWait);
 					//pthread_cond_signal(&cond);
-					pthread_mutex_unlock(&sleepMut);
+					//pthread_mutex_unlock(&sleepMut);
 					waitQueueShop[rank] = time2;
 					pakiet.priority = waitQueueShop[rank];
 					for(int i = 0; i < hunterTeamsNum; i++){
@@ -186,10 +186,13 @@ void* startKomWatekHunter(void* ptr){
 			case SHOP_ACK:
 				debugHunter("Dostalem SHOP_ACK od (tid:%d)", pakiet.src);
 				ackNumShop += 1;
+				debugHunter("Jestem po inkrementacji ackNumShop ");
 				if(ackNumShop == (hunterTeamsNum - 1) - (shopSize - 1)){
 					changeState(InShop);
-					//pthread_cond_broadcast(&cond2);
-					pthread_mutex_unlock(&sleepMut2);
+					
+						//debugHunter("Zaraz zdejme mutexa ");
+					//pthread_mutex_unlock(&sleepMut2);
+						//debugHunter("Zdjalem mutexa ");
 				}
 					debugHunter("Wywala shop ACK?");
 				break;
@@ -205,7 +208,7 @@ void* startKomWatekHunter(void* ptr){
 					if(ackNumShop == (hunterTeamsNum - 1) - (shopSize - 1)){
 						changeState(InShop);
 						//pthread_cond_broadcast(&cond2);
-						pthread_mutex_unlock(&sleepMut2);
+						//pthread_mutex_unlock(&sleepMut2);
 					}
 				}
 				
