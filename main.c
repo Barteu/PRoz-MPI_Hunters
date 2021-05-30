@@ -251,7 +251,7 @@ void changeActiveTasks( int newActiveTasks )
         return;
     }
     activeTasks += newActiveTasks;
-    debugHunter("Liczba moich aktualnie niewykonanych zadan: %d (LM: %d HM: %d)",ackStateTask,lowerLimit,upperLimit);
+    debugHunter("Liczba moich aktualnie niewykonanych zadan: %d (LM: %d HM: %d)",activeTasks,lowerLimit,upperLimit);
     pthread_mutex_unlock( &activeTasksMut );
 }
 

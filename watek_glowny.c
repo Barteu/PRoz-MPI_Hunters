@@ -50,7 +50,7 @@ void mainLoopHunter(){
 			// pthread_mutex_unlock(&sleepMut);
 		}
 		else if(stan==InWait){
-			printlnHunter("Ubiegam sie o sekcje krytyczna, jestem w stanie WAIT");
+			printlnHunter("Ubiegam sie o sekcję krytyczną sklepu, jestem w stanie WAIT");
 			pthread_mutex_lock(&sleepMut2);
 			// pthread_mutex_unlock(&sleepMut2);
 			debugHunter("Wychodze ze stanu WAIT");
