@@ -186,7 +186,7 @@ void* startKomWatekHunter(void* ptr){
 			case SHOP_ACK:
 				debugHunter("Dostalem SHOP_ACK od (tid:%d)", pakiet.src);
 				ackNumShop += 1;
-				debugHunter("Jestem po inkrementacji ackNumShop ");
+				
 				if(ackNumShop == (hunterTeamsNum - 1) - (shopSize - 1)){
 					changeState(InShop);
 					
