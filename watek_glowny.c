@@ -58,7 +58,7 @@ void mainLoopHunter(){
 			// pthread_mutex_unlock(&sleepMut);
 		}
 		else if(stan==InWait){
-			printlnHunter("Ubiegam sie o sekcję krytyczną sklepu, jestem w stanie WAIT");
+			printlnHunter("Ubiegam sie o sekcje krytyczna sklepu, jestem w stanie WAIT");
 			//pthread_mutex_lock(&sleepMut2);
 			while(stan==InWait){
 				sleep(1);
@@ -88,7 +88,7 @@ void mainLoopHunter(){
 			sleep(sleepTime);
 
 			tasksDoneHunter ++;
-			printlnHunter("Wychodze ze stanu TASK, zrealizowalem %d zadania",tasksDoneHunter);
+			printlnHunter("Wychodze ze stanu TASK, zrealizowalem %d zadan",tasksDoneHunter);
 			
 
 			packet_t message2;

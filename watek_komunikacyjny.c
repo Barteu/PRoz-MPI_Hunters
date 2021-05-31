@@ -7,7 +7,7 @@ void* startKomWatekGiver(void* ptr){
 	MPI_Status status;
     int is_message = FALSE;
     packet_t pakiet;
-	/* Obrazuje pętlę odbierającą pakiety o różnych typach */
+	/* Obrazuje petle odbierajaca pakiety o rożnych typach */
     while ( stan!=InFinish ) {
         MPI_Recv( &pakiet, 1, MPI_PAKIET_T, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		// Aktualizujemy zegar Lamporta procesu Zleceniodawcy
@@ -18,7 +18,7 @@ void* startKomWatekGiver(void* ptr){
 			break;
 		case FIN:
 			tasksDoneGiver++;
-			printlnGiver("Dostałem FIN od (tid:%d), zrealizowano %d moich zadań", pakiet.src,tasksDoneGiver);
+			printlnGiver("Dostalem FIN od (tid:%d), zrealizowano %d moich zadan", pakiet.src,tasksDoneGiver);
 			changeActiveTasks(-1);
 			if(activeTasks < lowerLimit && stan==InOverload){
 				changeState(InActive);	
@@ -36,7 +36,7 @@ void* startKomWatekHunter(void* ptr){
     int is_message = FALSE;
     packet_t pakiet;
 	int time2;
-	/* Obrazuje pętlę odbierającą pakiety o różnych typach */
+	/* Obrazuje petle odbierajaca pakiety o rożnych typach */
     while ( stan!=InFinish ) {
         MPI_Recv( &pakiet, 1, MPI_PAKIET_T, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		// Aktualizujemy zegar Lamporta procesu Lowcy
@@ -56,7 +56,7 @@ void* startKomWatekHunter(void* ptr){
 				changeState(InFinish);
 				break;
 			case BROADCAST:
-				debugHunter("Dostałem BROADCAST: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data,pakiet.src,pakiet.src);
+				debugHunter("Dostalem BROADCAST: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data,pakiet.src,pakiet.src);
 				addAckState(&ackStateTask, pakiet.data, pakiet.src);
 				addRequestPriority(&requestPriorityTask, pakiet.data,pakiet.src);
 				pakiet.priority = getRequestPriorityByHunter(&requestPriorityTask, pakiet.data, pakiet.src, rank);
@@ -71,7 +71,7 @@ void* startKomWatekHunter(void* ptr){
 				}
 				break;
 			case TASK_REQ:
-				debugHunter("Dostałem TASK_REQ: {taskId: %d, giverId: %d, priority: %d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.priority, pakiet.src);
+				debugHunter("Dostalem TASK_REQ: {taskId: %d, giverId: %d, priority: %d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.priority, pakiet.src);
 				int myPriority = getRequestPriorityByHunter(&requestPriorityTask, pakiet.data, pakiet.data2, rank);
 				if(myPriority != -1){
 					if(myPriority < pakiet.priority || (myPriority==pakiet.priority && rank<pakiet.src) ){
@@ -105,7 +105,7 @@ void* startKomWatekHunter(void* ptr){
 				}
 				break;
 			case TASK_ACK:
-				debugHunter("Dostałem TASK_ACK: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
+				debugHunter("Dostalem TASK_ACK: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
 				setAckStateByHunter(&ackStateTask,pakiet.data,pakiet.data2, pakiet.src, ACK_RECEIVED);
 				//sprawdzamy czy nie mozemy przyjac tego zlecenia
 				if(getAckStateTask(&ackStateTask,pakiet.data,pakiet.data2)){
@@ -125,7 +125,7 @@ void* startKomWatekHunter(void* ptr){
 			}
 				break;
 			case FIN:
-				debugHunter("Dostałem FIN: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
+				debugHunter("Dostalem FIN: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
 				deleteAckState(&ackStateTask, pakiet.data, pakiet.data2);
 				deleteRequestPriority(&requestPriorityTask, pakiet.data, pakiet.data2);
 				break;
@@ -147,14 +147,14 @@ void* startKomWatekHunter(void* ptr){
 				changeState(InFinish);
 				break;
 			case BROADCAST:
-				debugHunter("Dostałem BROADCAST: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data,pakiet.src,pakiet.src);
+				debugHunter("Dostalem BROADCAST: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data,pakiet.src,pakiet.src);
 				
 				addAckState(&ackStateTask, pakiet.data, pakiet.src);
 				addRequestPriority(&requestPriorityTask, pakiet.data,pakiet.src);
 				break;
 			
 			case TASK_REQ:
-				debugHunter("Dostałem TASK_REQ: {taskId: %d, giverId: %d, priority: %d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.priority, pakiet.src);
+				debugHunter("Dostalem TASK_REQ: {taskId: %d, giverId: %d, priority: %d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.priority, pakiet.src);
 				if(!isTaskInQueue(&taskQueue,pakiet.data, pakiet.data2))
 				{
 					sendPacket(&pakiet, pakiet.src, TASK_ACK);
@@ -163,7 +163,7 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			
 			case TASK_ACK:
-				debugHunter("Dostałem TASK_ACK: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
+				debugHunter("Dostalem TASK_ACK: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
 				setAckStateByHunter(&ackStateTask,pakiet.data,pakiet.data2, pakiet.src, ACK_RECEIVED);
 				//sprawdzamy czy nie mozemy przyjac tego zlecenia
 				if(getAckStateTask(&ackStateTask,pakiet.data,pakiet.data2)){
@@ -179,7 +179,7 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			
 			case FIN:
-				debugHunter("Dostałem FIN: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
+				debugHunter("Dostalem FIN: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
 				deleteAckState(&ackStateTask, pakiet.data, pakiet.data2);
 				deleteRequestPriority(&requestPriorityTask, pakiet.data, pakiet.data2);
 				break;
@@ -218,7 +218,7 @@ void* startKomWatekHunter(void* ptr){
 				changeState(InFinish);
 				break;
 			case BROADCAST:
-				debugHunter("Dostałem BROADCAST {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data,pakiet.src,pakiet.src);
+				debugHunter("Dostalem BROADCAST {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data,pakiet.src,pakiet.src);
 					
 				addAckState(&ackStateTask, pakiet.data, pakiet.src);
 				
@@ -227,7 +227,7 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			
 			case TASK_REQ:
-			    debugHunter("Dostałem TASK_REQ: {taskId: %d, giverId: %d, priority: %d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.priority, pakiet.src);
+			    debugHunter("Dostalem TASK_REQ: {taskId: %d, giverId: %d, priority: %d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.priority, pakiet.src);
 				if(!isTaskInQueue(&taskQueue,pakiet.data, pakiet.data2))
 				{
 					sendPacket(&pakiet, pakiet.src, TASK_ACK);
@@ -236,7 +236,7 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			
 			case TASK_ACK:
-				debugHunter("Dostałem TASK_ACK: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
+				debugHunter("Dostalem TASK_ACK: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
 				setAckStateByHunter(&ackStateTask,pakiet.data,pakiet.data2, pakiet.src, ACK_RECEIVED);
 				//sprawdzamy czy nie mozemy przyjac tego zlecenia
 				if(getAckStateTask(&ackStateTask,pakiet.data,pakiet.data2)){
@@ -251,7 +251,7 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			
 			case FIN:
-				debugHunter("Dostałem FIN: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
+				debugHunter("Dostalem FIN: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
 				deleteAckState(&ackStateTask, pakiet.data, pakiet.data2);
 				deleteRequestPriority(&requestPriorityTask, pakiet.data, pakiet.data2);
 				break;
@@ -271,14 +271,14 @@ void* startKomWatekHunter(void* ptr){
 				changeState(InFinish);
 				break;
 			case BROADCAST:
-				debugHunter("Dostałem BROADCAST: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data,pakiet.src,pakiet.src);
+				debugHunter("Dostalem BROADCAST: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data,pakiet.src,pakiet.src);
 				
 				addAckState(&ackStateTask, pakiet.data, pakiet.src);
 				addRequestPriority(&requestPriorityTask, pakiet.data,pakiet.src);
 				break;
 			
 			case TASK_REQ:
-			    debugHunter("Dostałem TASK_REQ: {taskId: %d, giverId: %d, priority: %d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.priority, pakiet.src);
+			    debugHunter("Dostalem TASK_REQ: {taskId: %d, giverId: %d, priority: %d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.priority, pakiet.src);
 				if(!isTaskInQueue(&taskQueue,pakiet.data, pakiet.data2))
 				{
 					sendPacket(&pakiet, pakiet.src, TASK_ACK);
@@ -287,7 +287,7 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			
 			case TASK_ACK:
-				debugHunter("Dostałem TASK_ACK: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
+				debugHunter("Dostalem TASK_ACK: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
 				setAckStateByHunter(&ackStateTask,pakiet.data,pakiet.data2, pakiet.src, ACK_RECEIVED);
 				//sprawdzamy czy nie mozemy przyjac tego zlecenia
 				if(getAckStateTask(&ackStateTask,pakiet.data,pakiet.data2)){
@@ -302,7 +302,7 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			
 			case FIN:
-				debugHunter("Dostałem FIN: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
+				debugHunter("Dostalem FIN: {taskId:%d, giverId:%d} od (tid:%d)", pakiet.data, pakiet.data2, pakiet.src);
 				deleteAckState(&ackStateTask, pakiet.data, pakiet.data2);
 				deleteRequestPriority(&requestPriorityTask, pakiet.data, pakiet.data2);
 				break;
