@@ -85,8 +85,7 @@ void* startKomWatekHunter(void* ptr){
 							forwardAllAck(&requestPriorityTask, &ackStateTask,pakiet.data, pakiet.data2);
 							ackNumShop = 0;
 							changeState(InWait);
-							//pthread_cond_signal(&cond);
-							//pthread_mutex_unlock(&sleepMut);
+							printlnHunter("Ubiegam sie o sekcje krytyczna sklepu");
 							waitQueueShop[rank] = time2;
 							pakiet.priority = waitQueueShop[rank];
 							for(int i = 0; i < hunterTeamsNum; i++){
@@ -113,8 +112,7 @@ void* startKomWatekHunter(void* ptr){
 					forwardAllAck(&requestPriorityTask, &ackStateTask,pakiet.data, pakiet.data2);
 					ackNumShop = 0;
 					changeState(InWait);
-					//pthread_cond_signal(&cond);
-					//pthread_mutex_unlock(&sleepMut);
+					printlnHunter("Ubiegam sie o sekcje krytyczna sklepu");
 					waitQueueShop[rank] = time2;
 					pakiet.priority = waitQueueShop[rank];
 					for(int i = 0; i < hunterTeamsNum; i++){

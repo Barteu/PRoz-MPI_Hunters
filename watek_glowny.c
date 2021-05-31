@@ -58,7 +58,7 @@ void mainLoopHunter(){
 			// pthread_mutex_unlock(&sleepMut);
 		}
 		else if(stan==InWait){
-			printlnHunter("Ubiegam sie o sekcje krytyczna sklepu, jestem w stanie WAIT");
+			printlnHunter("Jestem w stanie WAIT");
 			//pthread_mutex_lock(&sleepMut2);
 			while(stan==InWait){
 				sleep(1);
@@ -119,12 +119,12 @@ void mainLoopHunter(){
 				}
 				ackNumShop = 0;
 				
-				debugHunter("Wchodze do WAIT");
+				printlnHunter("Mam kolejne zadanie w kolejce, Wchodze do WAIT");
 				changeState(InWait);
 			}
 			else{
 				
-				debugHunter("Wychodze do SEARCH");
+				debugHunter("Bede ubiegal sie o kolejne zadanie, Wychodze do SEARCH");
 				changeState(InSearch);	
 				sendOldRequests(&requestPriorityTask, &ackStateTask);
 			}
