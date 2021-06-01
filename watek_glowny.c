@@ -80,8 +80,13 @@ void mainLoopHunter(){
 			for(int i = 0; i < hunterTeamsNum; i++){
 				if(i != rank && waitQueueShop[i]>0){
 					sendPacket2(&message, i, SHOP_ACK);
+					
+				}
+				if ( i!= rank)
+				{
 					waitQueueShop[i] = -1;
 				}
+				
 			}
 			ackNumShop = 0;
 			int sleepTime = 5 + random()%5;
