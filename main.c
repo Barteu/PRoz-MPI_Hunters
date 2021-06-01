@@ -118,6 +118,8 @@ void inicjuj(int *argc, char ***argv)
 
     shopSize = atoi((*argv)[4]);
     if(rank< atoi((*argv)[1])){
+        zegar = 1;
+        zegar2 = 1;
         taskQueue.head = NULL;
         taskQueue.tail = NULL;
         ackStateTask.head = NULL;
@@ -136,6 +138,7 @@ void inicjuj(int *argc, char ***argv)
     } 
     else
     {
+        zegar = 1;
         stan = InActive;
         lowerLimit = atoi((*argv)[2]);
         upperLimit = atoi((*argv)[3]);

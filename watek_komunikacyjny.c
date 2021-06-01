@@ -183,8 +183,11 @@ void* startKomWatekHunter(void* ptr){
 				break;
 			case SHOP_ACK:
 				debugHunter("Dostalem SHOP_ACK od (tid:%d)", pakiet.src);
+				if (waitQueueShop[pakiet.src]<0)
+				{
 				ackNumShop += 1;
-				
+				waitQueueShop[pakiet.src] = 0;
+				}
 				if(ackNumShop == (hunterTeamsNum - 1) - (shopSize - 1)){
 					changeState(InShop);
 					
@@ -192,11 +195,13 @@ void* startKomWatekHunter(void* ptr){
 				
 				break;
 			case SHOP_REQ:
-				debugHunter("Dostalem SHOP_REQ {priority: %d} od (tid:%d), odsylam SHOP_ACK", pakiet.priority, pakiet.src);
+				debugHunter("Dostalem SHOP_REQ {priority: %d} od (tid:%d)", pakiet.priority, pakiet.src);
 				if(waitQueueShop[rank] == -1){
 					sendPacket2(&pakiet, pakiet.src, SHOP_ACK);
 				}
 				else if(waitQueueShop[rank] < pakiet.priority || (waitQueueShop[rank] == pakiet.priority && rank < pakiet.src)){
+					if( waitQueueShop[pakiet.src]<0)
+					{
 					waitQueueShop[pakiet.src] = pakiet.priority;
 					ackNumShop += 1; 
 					debugHunter("SHOP_REQ {priority: %d} traktuje jako SHOP_ACK (tid:%d)", pakiet.priority, pakiet.src);
@@ -204,6 +209,7 @@ void* startKomWatekHunter(void* ptr){
 						changeState(InShop);
 						//pthread_cond_broadcast(&cond2);
 						//pthread_mutex_unlock(&sleepMut2);
+					}
 					}
 				}
 				

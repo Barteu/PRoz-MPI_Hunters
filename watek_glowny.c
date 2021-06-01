@@ -78,7 +78,7 @@ void mainLoopHunter(){
 			printlnHunter("Jestem w stanie TASK");
 			packet_t message;
 			for(int i = 0; i < hunterTeamsNum; i++){
-				if(i != rank && waitQueueShop[i]!=-1){
+				if(i != rank && waitQueueShop[i]>0){
 					sendPacket2(&message, i, SHOP_ACK);
 					waitQueueShop[i] = -1;
 				}
@@ -112,15 +112,16 @@ void mainLoopHunter(){
 				waitQueueShop[rank] = zegar2;
 				pthread_mutex_unlock(&lampMut2);
 				pakiet.priority = waitQueueShop[rank];
+				ackNumShop = 0;
+				printlnHunter("Mam kolejne zadanie w kolejce, Wchodze do WAIT");
+				changeState(InWait);
+				
 				for(int i = 0; i < hunterTeamsNum; i++){
 					if(i != rank){
 						sendPacket2(&pakiet, i, SHOP_REQ);
 					}
 				}
-				ackNumShop = 0;
-				
-				printlnHunter("Mam kolejne zadanie w kolejce, Wchodze do WAIT");
-				changeState(InWait);
+
 			}
 			else{
 				
